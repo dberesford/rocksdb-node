@@ -1,0 +1,42 @@
+{
+  "author": {
+    "name": "Damian Beresford",
+    "email": "dberesford@gmail.com",
+    "url": "twitter.com/dberesford"
+  },
+  "name": "rocksdb-node",
+  "description": "RocksDB support for node.js.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/dberesford/rocksdb-node",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dberesford/rocksdb-node.git"
+  },
+  "dependencies": {
+    "nan": "2.6.2"
+  },
+  "devDependencies": {
+    "snazzy": "7.0.0",
+    "standard": "10.0.2",
+    "tap": "10.3.2"
+  },
+  "optionalDependencies": {},
+  "main": "rocksdb.js",
+  "scripts": {
+    "preuninstall": "rm -rf build/*",
+    "test": "standard | snazzy && tap test/*.test.js",
+    "install": "node-gyp rebuild",
+    "build": "node-gyp build"
+  },
+  "gypfile": true,
+  "contributors": [
+    {
+      "name": "Damian Beresford",
+      "email": "dberesford@gmail.com"
+    }
+  ],
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/dberesford/rocksdb-node/issues"
+  }
+}
