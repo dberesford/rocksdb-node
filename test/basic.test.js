@@ -3,7 +3,7 @@ var tap = require('tap')
 var test = require('tap').test
 
 var rocksdb = require('../build/Release/rocksdb.node')
-var db = rocksdb.open('/tmp/rockme')
+var db = rocksdb.open({create_if_missing: true}, '/tmp/rockme')
 tap.ok(db)
 
 test('exception thrown for wrong args', function (t) {
