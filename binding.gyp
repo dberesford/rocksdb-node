@@ -4,7 +4,7 @@
       'target_name': 'rocksdb',
       'sources': [
         "rocksdb.cc",
-        "db.cc"
+        "dbr.cc"
       ],
       'include_dirs' : [
         "<!(node -e \"require('nan')\")"

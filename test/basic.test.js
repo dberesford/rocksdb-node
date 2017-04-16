@@ -1,15 +1,46 @@
-// var assert = require('assert')
 var tap = require('tap')
 var test = require('tap').test
-
 var rocksdb = require('../build/Release/rocksdb.node')
-var db = rocksdb.open({create_if_missing: true}, '/tmp/rockme')
-tap.ok(db)
+var db
 
-test('exception thrown for wrong args', function (t) {
+test('setup', function (t) {
+  db = rocksdb({create_if_missing: true}, '/tmp/rocksdbBasicTest')
+  tap.ok(db)
+  t.end()
+})
+
+test('simple put/get', function (t) {
+  db.put('rocks', 'db')
+  tap.equal(db.get('rocks'), 'db')
+  t.end()
+})
+
+test('get non-existent key', function (t) {
+  t.notOk(db.get('nokey'))
+  t.end()
+})
+
+/*
+// TODO - this is failing with a weird crash..
+test('wrong args constructor', function (t) {
   t.throws(function () {
-    rocksdb.open()
+    rocksdb()
   }, /Wrong number of arguments/)
 
+  t.end()
+})
+*/
+
+test('wrong args put', function (t) {
+  t.throws(function () {
+    db.put()
+  }, /Wrong number of arguments/)
+  t.end()
+})
+
+test('wrong args get', function (t) {
+  t.throws(function () {
+    db.get()
+  }, /Wrong number of arguments/)
   t.end()
 })

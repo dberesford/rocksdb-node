@@ -1,19 +1,14 @@
 #include <nan.h>
-#include "db.h"
+#include <node.h>
+#include "dbr.h"
 
-using v8::FunctionTemplate;
-using v8::Handle;
-using v8::Object;
-using v8::String;
-using Nan::GetFunction;
-using Nan::New;
-using Nan::Set;
+void CreateDB(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  DBR::NewInstance(args);
+}
 
-// Expose synchronous and asynchronous access to our
-// Estimate() function
-NAN_MODULE_INIT(InitAll) {
-  Set(target, New<String>("open").ToLocalChecked(),
-    GetFunction(New<FunctionTemplate>(OpenDB)).ToLocalChecked());
+void InitAll(v8::Local<v8::Object> exports, v8::Local<v8::Object> module) {
+  DBR::Init(exports);
+  NODE_SET_METHOD(module, "exports", CreateDB);
 }
 
 NODE_MODULE(addon, InitAll)
