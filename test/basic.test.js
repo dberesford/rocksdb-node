@@ -1,7 +1,7 @@
-var tap = require('tap')
-var test = require('tap').test
-var rocksdb = require('../build/Release/rocksdb.node')
-var db
+const tap = require('tap')
+const test = require('tap').test
+const rocksdb = require('../build/Release/rocksdb.node')
+let db
 
 test('setup', function (t) {
   db = rocksdb({create_if_missing: true}, '/tmp/rocksdbBasicTest')
