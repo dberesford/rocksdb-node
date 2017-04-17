@@ -1,37 +1,37 @@
 #include <node.h>
 #include <nan.h>
 #include <iostream>
-#include "dbr.h"  
+#include "RocksDBNode.h"  
 #include "rocksdb/db.h"
 #include <list>
 using namespace std;
 
-v8::Persistent<v8::Function> DBR::constructor;
+v8::Persistent<v8::Function> RocksDBNode::constructor;
 
-DBR::DBR(rocksdb::Options options, string path, rocksdb::DB *db) {
+RocksDBNode::RocksDBNode(rocksdb::Options options, string path, rocksdb::DB *db) {
   _options = options;
   _path = path;
   _db = db;
 }
 
-DBR::~DBR() {
+RocksDBNode::~RocksDBNode() {
   delete _db;
 }
 
-void DBR::Init(v8::Local<v8::Object> exports) {
+void RocksDBNode::Init(v8::Local<v8::Object> exports) {
   v8::Isolate* isolate = exports->GetIsolate();
   v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, New);
-  tpl->SetClassName(v8::String::NewFromUtf8(isolate, "DBR"));
+  tpl->SetClassName(v8::String::NewFromUtf8(isolate, "RocksDBNode"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-  NODE_SET_PROTOTYPE_METHOD(tpl, "put", DBR::Put);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "get", DBR::Get);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "put", RocksDBNode::Put);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "get", RocksDBNode::Get);
 
   constructor.Reset(isolate, tpl->GetFunction());
-  exports->Set(v8::String::NewFromUtf8(isolate, "DBR"), tpl->GetFunction());
+  exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
 }
 
-void DBR::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
   if (args.IsConstructCall()) {
     
@@ -59,8 +59,8 @@ void DBR::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
       return;
     }
   
-    DBR* dbr = new DBR(options, path, db);
-    dbr->Wrap(args.This());
+    RocksDBNode* rocksDBNode = new RocksDBNode(options, path, db);
+    rocksDBNode->Wrap(args.This());
     args.GetReturnValue().Set(args.This());
   } else {
     const unsigned argc = args.Length();
@@ -79,7 +79,7 @@ void DBR::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 }
 
-void DBR::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void RocksDBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   const unsigned argc = args.Length();
@@ -97,7 +97,7 @@ void DBR::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   args.GetReturnValue().Set(instance);
 }
 
-void DBR::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   if (args.Length() < 2) {
@@ -108,15 +108,15 @@ void DBR::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   string key = string(*Nan::Utf8String(args[0])); 
   string value = string(*Nan::Utf8String(args[1])); 
 
-  DBR* dbr = ObjectWrap::Unwrap<DBR>(args.Holder());
-  rocksdb::Status s = dbr->_db->Put(rocksdb::WriteOptions(), key, value);
+  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  rocksdb::Status s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
   if (!s.ok()) {
     isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
     return;
   }
 }
 
-void DBR::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   if (args.Length() < 1) {
@@ -127,8 +127,8 @@ void DBR::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   string key = string(*Nan::Utf8String(args[0])); 
   string value;
 
-  DBR* dbr = ObjectWrap::Unwrap<DBR>(args.Holder());
-  rocksdb::Status s = dbr->_db->Get(rocksdb::ReadOptions(), key, &value);
+  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  rocksdb::Status s = rocksDBNode->_db->Get(rocksdb::ReadOptions(), key, &value);
   
   if (s.IsNotFound()) {
     args.GetReturnValue().Set(Nan::Null());

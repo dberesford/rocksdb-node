@@ -1,18 +1,18 @@
-#ifndef DBR_H
-#define DBR_H
+#ifndef RocksDBNode_H
+#define RocksDBNode_H
 
 #include <nan.h>
 #include "rocksdb/db.h"
 using namespace std;
 
-class DBR : public Nan::ObjectWrap {
+class RocksDBNode : public Nan::ObjectWrap {
  public:
   static void Init(v8::Local<v8::Object> exports);
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
 
  private:
-  explicit DBR(rocksdb::Options options, string path, rocksdb::DB* db);
-  ~DBR();
+  explicit RocksDBNode(rocksdb::Options options, string path, rocksdb::DB* db);
+  ~RocksDBNode();
 
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
   
@@ -26,4 +26,4 @@ class DBR : public Nan::ObjectWrap {
 
 };
 
-#endif  // DBR_H
+#endif  // RocksDBNode_H
