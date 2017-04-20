@@ -105,11 +105,16 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
     return;
   }
 
-  string key = string(*Nan::Utf8String(args[0])); 
-  string value = string(*Nan::Utf8String(args[1])); 
-
+  // TODO - check for key undefined or null
+  rocksdb::Slice key = node::Buffer::HasInstance(args[0]) ? rocksdb::Slice(node::Buffer::Data(args[0]->ToObject()), node::Buffer::Length(args[0]->ToObject()))
+                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[0])));
+  rocksdb::Slice value = node::Buffer::HasInstance(args[1]) ? rocksdb::Slice(node::Buffer::Data(args[1]->ToObject()), node::Buffer::Length(args[1]->ToObject()))
+                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[1])));
+  
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
-  rocksdb::Status s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
+  rocksdb::Status s;
+
+  s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
   if (!s.ok()) {
     isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
     return;
@@ -124,7 +129,9 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     return;
   }
 
-  string key = string(*Nan::Utf8String(args[0])); 
+  rocksdb::Slice key = node::Buffer::HasInstance(args[0]) ? rocksdb::Slice(node::Buffer::Data(args[0]->ToObject()), node::Buffer::Length(args[0]->ToObject()))
+                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[0])));
+  // TODO - need to pass an option to Get or something that indicates you want a buffer returned
   string value;
 
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
