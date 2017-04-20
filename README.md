@@ -15,11 +15,17 @@ const rocksdb = require('rocksdb-node')
 const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks')
 const value = db.get('node')
+
+// both keys and vals as buffers
+const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
+const val = fs.readFileSync('./test/fixtures/beach.jpg')
+db.put(key, val)
+const beach = db.get({buffer: true}, key)
+fs.writeFileSync('/tmp/beach2.jpg', beach)
 ```
 
 ## Rough TODO List
 
-* Slice & buffer support in put/get
 * async usage
 * more nan, less direct v8
 * iterators

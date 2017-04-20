@@ -110,7 +110,6 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
                                                           : rocksdb::Slice(string(*Nan::Utf8String(args[0])));
   rocksdb::Slice value = node::Buffer::HasInstance(args[1]) ? rocksdb::Slice(node::Buffer::Data(args[1]->ToObject()), node::Buffer::Length(args[1]->ToObject()))
                                                             : rocksdb::Slice(string(*Nan::Utf8String(args[1])));
-  
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   rocksdb::Status s;
 
@@ -128,12 +127,21 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
     return;
   }
+  
+  int argIndex = 0;
+  bool buffer = false;
+  if (args.Length() == 2 && args[1]->IsObject()) {  
+    v8::Local<v8::String> key = Nan::New("buffer").ToLocalChecked();  
+    v8::Local<v8::Object> opts = args[1].As<v8::Object>();
+    if (!opts.IsEmpty() && opts->Has(key)) {
+      buffer = opts->Get(key)->BooleanValue();
+    }
+    argIndex = 1;
+  }
 
-  rocksdb::Slice key = node::Buffer::HasInstance(args[0]) ? rocksdb::Slice(node::Buffer::Data(args[0]->ToObject()), node::Buffer::Length(args[0]->ToObject()))
-                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[0])));
-  // TODO - need to pass an option to Get or something that indicates you want a buffer returned
+  rocksdb::Slice key = node::Buffer::HasInstance(args[argIndex]) ? rocksdb::Slice(node::Buffer::Data(args[argIndex]->ToObject()), node::Buffer::Length(args[argIndex]->ToObject()))
+                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[argIndex])));
   string value;
-
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   rocksdb::Status s = rocksDBNode->_db->Get(rocksdb::ReadOptions(), key, &value);
   
@@ -147,5 +155,9 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     return;
   }
 
-  args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, value.c_str()));
+  if (buffer) {
+    args.GetReturnValue().Set(Nan::CopyBuffer((char*)value.data(), value.size()).ToLocalChecked());
+  } else {
+    args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, value.c_str()));
+  }
 }
