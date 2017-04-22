@@ -2,8 +2,9 @@
 #include <nan.h>
 #include <iostream>
 #include "RocksDBNode.h"  
+#include "PutWorker.h"
+#include "GetWorker.h"
 #include "rocksdb/db.h"
-#include <list>
 using namespace std;
 
 v8::Persistent<v8::Function> RocksDBNode::constructor;
@@ -100,9 +101,15 @@ void RocksDBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
 void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
+  // TODO - fix this, should return callback.. 
   if (args.Length() < 2) {
     isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
     return;
+  }
+
+  Nan::Callback *callback = NULL;
+  if (args.Length() == 3) {
+    callback = new Nan::Callback(args[2].As<v8::Function>());
   }
 
   // TODO - check for key undefined or null
@@ -113,51 +120,84 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   rocksdb::Status s;
 
-  s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
-  if (!s.ok()) {
-    isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
-    return;
+  if (callback) {
+    Nan::AsyncQueueWorker(new PutWorker(callback, rocksDBNode->_db, key, value));
+  } else {
+    s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
+    if (!s.ok()) {
+      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
+    }
   }
 }
 
 void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
-  if (args.Length() < 1) {
+  int optsIndex = -1;
+  int keyIndex = -1;
+  int callbackIndex = -1;
+
+  // if only one arg, assume it's the key
+  if (args.Length() == 1) {
+    keyIndex = 0;
+  } else if (args.Length() == 2) {
+    // the two args are either (opts, key) or (key, callback)
+    if (args[1]->IsFunction()) {
+      keyIndex = 0;
+      callbackIndex = 1;
+    } else {
+      optsIndex = 0;
+      keyIndex = 1;
+    }
+  } else if (args.Length() == 3) {
+    optsIndex = 0;
+    keyIndex = 1;
+    callbackIndex = 2;
+  } else {
     isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
-    return;
+    return;    
   }
   
-  int argIndex = 0;
+  // process options
   bool buffer = false;
-  if (args.Length() == 2 && args[1]->IsObject()) {  
+  if (optsIndex != -1) {  
     v8::Local<v8::String> key = Nan::New("buffer").ToLocalChecked();  
-    v8::Local<v8::Object> opts = args[1].As<v8::Object>();
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
     if (!opts.IsEmpty() && opts->Has(key)) {
       buffer = opts->Get(key)->BooleanValue();
     }
-    argIndex = 1;
   }
 
-  rocksdb::Slice key = node::Buffer::HasInstance(args[argIndex]) ? rocksdb::Slice(node::Buffer::Data(args[argIndex]->ToObject()), node::Buffer::Length(args[argIndex]->ToObject()))
-                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[argIndex])));
-  string value;
+  // check if callback provided
+  Nan::Callback *callback = NULL;
+  if (callbackIndex != -1) {
+    callback = new Nan::Callback(args[callbackIndex].As<v8::Function>());
+  }
+
+  rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
+                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
-  rocksdb::Status s = rocksDBNode->_db->Get(rocksdb::ReadOptions(), key, &value);
   
-  if (s.IsNotFound()) {
-    args.GetReturnValue().Set(Nan::Null());
-    return;
-  }
-
-  if (!s.ok()) {
-    isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
-    return;
-  }
-
-  if (buffer) {
-    args.GetReturnValue().Set(Nan::CopyBuffer((char*)value.data(), value.size()).ToLocalChecked());
+  if (callback) {
+    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, key, buffer));
   } else {
-    args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, value.c_str()));
+    string value;
+    rocksdb::Status s = rocksDBNode->_db->Get(rocksdb::ReadOptions(), key, &value);
+  
+    if (s.IsNotFound()) {
+      args.GetReturnValue().Set(Nan::Null());
+      return;
+    }
+
+    if (!s.ok()) {
+      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
+      return;
+    }
+
+    if (buffer) {
+      args.GetReturnValue().Set(Nan::CopyBuffer((char*)value.data(), value.size()).ToLocalChecked());
+    } else {
+      args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, value.c_str()));
+    }
   }
 }

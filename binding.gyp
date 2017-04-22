@@ -4,6 +4,8 @@
       'target_name': 'rocksdb',
       'sources': [
         "rocksdb.cc",
+        "PutWorker.cc",
+        "GetWorker.cc",
         "RocksDBNode.cc"
       ],
       'include_dirs' : [

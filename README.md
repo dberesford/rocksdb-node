@@ -8,6 +8,8 @@ Node native binding for RocksDB. Aims to be a full nodejs mapping for https://gi
 
 ## Usage
 
+RockDB-node has both a synchronous and asynchronous interface api. 
+
 Sync:
 
 ```
@@ -22,6 +24,21 @@ const val = fs.readFileSync('./test/fixtures/beach.jpg')
 db.put(key, val)
 const beach = db.get({buffer: true}, key)
 fs.writeFileSync('/tmp/beach2.jpg', beach)
+```
+
+Async: 
+
+```
+const rocksdb = require('rocksdb-node')
+const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
+db.put('node', 'rocks', function(err) {
+  if (err) return console.error(err);
+  db.get('node', function (err, val) {
+    if (err) return console.error(err);
+    console.log(val)
+  })
+})
+
 ```
 
 ## Rough TODO List

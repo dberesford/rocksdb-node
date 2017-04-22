@@ -9,7 +9,7 @@ test('setup', function (t) {
   t.end()
 })
 
-test('simple put/get', function (t) {
+test('simple sync put/get', function (t) {
   db.put('rocks', 'db')
   tap.equal(db.get('rocks'), 'db')
   t.end()
