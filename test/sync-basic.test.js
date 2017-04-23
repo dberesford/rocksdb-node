@@ -20,7 +20,6 @@ test('get non-existent key', function (t) {
   t.end()
 })
 
-/*
 // TODO - this is failing with a weird crash..
 test('wrong args constructor', function (t) {
   t.throws(function () {
@@ -29,7 +28,6 @@ test('wrong args constructor', function (t) {
 
   t.end()
 })
-*/
 
 test('wrong args put', function (t) {
   t.throws(function () {

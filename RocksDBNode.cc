@@ -4,6 +4,7 @@
 #include "RocksDBNode.h"  
 #include "PutWorker.h"
 #include "GetWorker.h"
+#include "OptionsHelper.h"
 #include "rocksdb/db.h"
 using namespace std;
 
@@ -30,33 +31,27 @@ void RocksDBNode::Init(v8::Local<v8::Object> exports) {
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
-}
+} 
 
 void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Nan::HandleScope scope;
   v8::Isolate* isolate = args.GetIsolate();
   if (args.IsConstructCall()) {
-    
-    // TODO - strange node crash if args aren't correct..
     if (args.Length() < 2) {
-      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
+      Nan::ThrowTypeError("Wrong number of arguments");
       return;
     }
   
-    v8::Local<v8::Object> opts = args[0].As<v8::Object>(); 
+    v8::Local<v8::Object> opts = args[0].As<v8::Object>();
     string path = string(*Nan::Utf8String(args[1]));    
     rocksdb::Options options;
-  
-    // TODO - figure out the dynamic way of doing this in c++.. 
-    v8::Local<v8::String> create_if_missing = Nan::New("create_if_missing").ToLocalChecked();
-    if (opts->Has(create_if_missing)) options.create_if_missing = opts->Get(create_if_missing)->BooleanValue();
-
-    v8::Local<v8::String> error_if_exists = Nan::New("error_if_exists").ToLocalChecked();
-    if (opts->Has(error_if_exists)) options.error_if_exists = opts->Get(error_if_exists)->BooleanValue();
-  
+    OptionsHelper::ProcessOpenOptions(opts, &options);
+    
     rocksdb::DB* db;
     rocksdb::Status s = rocksdb::DB::Open(options, path, &db);
+
     if (!s.ok()) {
-      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
+      Nan::ThrowError(s.getState());
       return;
     }
   
@@ -91,19 +86,32 @@ void RocksDBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   v8::Local<v8::Function> cons = v8::Local<v8::Function>::New(isolate, constructor);
   v8::Local<v8::Context> context = isolate->GetCurrentContext();
-  v8::Local<v8::Object> instance = cons->NewInstance(context, argc, argv).ToLocalChecked();
-  
+ 
+  // TODO - seek advice here, exception propagation from the constructor here is non-trivial, there may be a better way of doing this
+  v8::MaybeLocal<v8::Object> instance;
+  v8::Local<v8::Value> err;
+  bool hasException = false;
+  {
+    Nan::TryCatch tc;
+    instance = cons->NewInstance(context, argc, argv);
+    if (tc.HasCaught()) {
+      err = tc.Exception();
+      hasException = true;
+    }
+  }
+
+  if (hasException) {
+    isolate->ThrowException(err);  
+  } else {
+    args.GetReturnValue().Set(instance.ToLocalChecked());
+  }
   delete [] argv;
   argv = NULL;
-  args.GetReturnValue().Set(instance);
 }
 
 void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  v8::Isolate* isolate = args.GetIsolate();
-
-  // TODO - fix this, should return callback.. 
   if (args.Length() < 2) {
-    isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
+    Nan::ThrowTypeError("Wrong number of arguments");
     return;
   }
 
@@ -125,7 +133,7 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   } else {
     s = rocksDBNode->_db->Put(rocksdb::WriteOptions(), key, value);
     if (!s.ok()) {
-      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
+      Nan::ThrowError(s.getState());
     }
   }
 }
@@ -154,7 +162,7 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     keyIndex = 1;
     callbackIndex = 2;
   } else {
-    isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, "Wrong number of arguments")));
+    Nan::ThrowTypeError("Wrong number of arguments");
     return;    
   }
   
@@ -190,7 +198,7 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     }
 
     if (!s.ok()) {
-      isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, s.getState())));
+      Nan::ThrowError(s.getState());
       return;
     }
 

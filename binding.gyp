@@ -6,6 +6,7 @@
         "rocksdb.cc",
         "PutWorker.cc",
         "GetWorker.cc",
+        "OptionsHelper.cc",
         "RocksDBNode.cc"
       ],
       'include_dirs' : [

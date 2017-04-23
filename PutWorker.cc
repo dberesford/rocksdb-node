@@ -1,5 +1,4 @@
 #include <nan.h>
-#include <iostream>
 #include "PutWorker.h"  
 #include "rocksdb/db.h"
 

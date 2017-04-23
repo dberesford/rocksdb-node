@@ -1,5 +1,4 @@
 #include <nan.h>
-#include <iostream>
 #include "GetWorker.h"  
 #include "rocksdb/db.h"
 
@@ -17,7 +16,7 @@ void GetWorker::HandleOKCallback () {
   v8::Local<v8::Value> argv[2] = { Nan::Null(), Nan::Null() };
   if (!_status.ok()) {
     v8::Local<v8::Value> errv[1] = {};
-    errv[0] = Nan::New<v8::String>(_status.getState()).ToLocalChecked();
+    errv[0] = Nan::Error(_status.getState());
     callback->Call(1, errv);
     return;
   } 

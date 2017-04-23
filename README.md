@@ -41,13 +41,22 @@ db.put('node', 'rocks', function(err) {
 
 ```
 
+## Options
+
+All RocksDB options are mostly supported, as defined in [options.h](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h). 
+
+See [options.test.js](./test/options.test.js) for the definitive list.
+
+## RocksDB Version
+
+Developed against RocksDB 5.2.
+
 ## Rough TODO List
 
-* async usage
 * more nan, less direct v8
-* iterators
-* make option/config passing dynamic
+* full support for Open options (only bool options supported so far)
 * support for ReadOptions and WriteOptions
+* iterators
 * support for atomic updates (batch)
 * support for snapshots
 * support for js comparators
