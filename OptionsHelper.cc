@@ -54,3 +54,10 @@ void OptionsHelper::ProcessOpenOptions (v8::Local<v8::Object> opts, rocksdb::Opt
   INT_OPTION(write_thread_max_yield_usec, opts, options)
   INT_OPTION(write_thread_slow_yield_usec, opts, options)
 }
+
+void OptionsHelper::ProcessWriteOptions (v8::Local<v8::Object> opts, rocksdb::WriteOptions *options) {
+  BOOLEAN_OPTION(sync, opts, options)
+  BOOLEAN_OPTION(disableWAL, opts, options)
+  BOOLEAN_OPTION(ignore_missing_column_families, opts, options)
+  BOOLEAN_OPTION(no_slowdown, opts, options)
+}

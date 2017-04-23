@@ -54,5 +54,13 @@ test('options test', function (t) {
 
   const db = rocksdb(opts, '/tmp/rocksdbOptsTest')
   tap.ok(db)
+
+  const writeOpts = {
+    sync: false,
+    disableWAL: false,
+    ignore_missing_column_families: false,
+    no_slowdown: false
+  }
+  db.put(writeOpts, 'foo', 'bar')
   t.end()
 })
