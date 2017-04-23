@@ -198,9 +198,15 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     return;    
   }
   
-  // process options
-  bool buffer = false;
+  rocksdb::ReadOptions options;
   if (optsIndex != -1) {  
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessReadOptions(opts, &options);
+  }
+
+  // buffer is a special non-rocks option, it's specific to rocksdb-node
+  bool buffer = false;
+  if (optsIndex != -1) {
     v8::Local<v8::String> key = Nan::New("buffer").ToLocalChecked();  
     v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
     if (!opts.IsEmpty() && opts->Has(key)) {
@@ -219,10 +225,10 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   
   if (callback) {
-    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, key, buffer));
+    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, key, buffer, options));
   } else {
     string value;
-    rocksdb::Status s = rocksDBNode->_db->Get(rocksdb::ReadOptions(), key, &value);
+    rocksdb::Status s = rocksDBNode->_db->Get(options, key, &value);
   
     if (s.IsNotFound()) {
       args.GetReturnValue().Set(Nan::Null());

@@ -8,6 +8,7 @@ class OptionsHelper {
  public:
   static void ProcessOpenOptions(v8::Local<v8::Object>, rocksdb::Options *opts);
   static void ProcessWriteOptions(v8::Local<v8::Object>, rocksdb::WriteOptions *opts);
+  static void ProcessReadOptions(v8::Local<v8::Object>, rocksdb::ReadOptions *opts);
 };
 
 #define BOOLEAN_OPTION(name, opts, options)                             \

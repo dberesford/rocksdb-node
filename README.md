@@ -8,7 +8,7 @@ Node native binding for RocksDB. Aims to be a full nodejs mapping for https://gi
 
 ## Usage
 
-RockDB-node has both a synchronous and asynchronous interface api. 
+RockDB-node has both a synchronous and asynchronous api. 
 
 Sync:
 
@@ -43,9 +43,17 @@ db.put('node', 'rocks', function(err) {
 
 ## Options
 
-All RocksDB options are mostly supported, as defined in [options.h](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h). 
+All RocksDB options are mostly supported for Open, Write and Read options, as defined in [options.h](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h). 
 
 See [options.test.js](./test/options.test.js) for the definitive list.
+
+Examples:
+```
+const db = rocksdb({error_if_exists: true}}, '/tmp/my-rocks-database')
+
+db.put({sync: false}, 'foo', 'bar')
+const val = db.get({verify_checksums: false}, 'foo')
+```
 
 ## RocksDB Version
 
@@ -54,7 +62,6 @@ Developed against RocksDB 5.2.
 ## Rough TODO List
 
 * more nan, less direct v8
-* support for ReadOptions and WriteOptions
 * iterators
 * support for atomic updates (batch)
 * support for snapshots

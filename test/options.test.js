@@ -62,5 +62,19 @@ test('options test', function (t) {
     no_slowdown: false
   }
   db.put(writeOpts, 'foo', 'bar')
+
+  const readOpts = {
+    verify_checksums: true,
+    fill_cache: true,
+    tailing: false,
+    managed: false,
+    total_order_seek: false,
+    prefix_same_as_start: false,
+    pin_data: false,
+    background_purge_on_iterator_cleanup: false,
+    readahead_size: 0,
+    ignore_range_deletions: false
+  }
+  tap.equals(db.get(readOpts, 'foo'), 'bar')
   t.end()
 })

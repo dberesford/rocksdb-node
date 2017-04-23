@@ -2,12 +2,12 @@
 #include "GetWorker.h"  
 #include "rocksdb/db.h"
 
-GetWorker::GetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::Slice key, bool buffer)
-    : AsyncWorker(callback), _db(db), _key(key), _buffer(buffer) {}
+GetWorker::GetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::Slice key, bool buffer, rocksdb::ReadOptions options)
+    : AsyncWorker(callback), _db(db), _key(key), _buffer(buffer), _options(options) {}
 GetWorker::~GetWorker() {}
 
 void GetWorker::Execute () {
-  _status = _db->Get(rocksdb::ReadOptions(), _key, &_value);
+  _status = _db->Get(_options, _key, &_value);
 }
 
 void GetWorker::HandleOKCallback () {

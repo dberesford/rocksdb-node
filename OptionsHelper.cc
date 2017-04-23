@@ -61,3 +61,16 @@ void OptionsHelper::ProcessWriteOptions (v8::Local<v8::Object> opts, rocksdb::Wr
   BOOLEAN_OPTION(ignore_missing_column_families, opts, options)
   BOOLEAN_OPTION(no_slowdown, opts, options)
 }
+
+void OptionsHelper::ProcessReadOptions (v8::Local<v8::Object> opts, rocksdb::ReadOptions *options) {
+  BOOLEAN_OPTION(verify_checksums, opts, options)
+  BOOLEAN_OPTION(fill_cache, opts, options)
+  BOOLEAN_OPTION(tailing, opts, options)
+  BOOLEAN_OPTION(managed, opts, options)
+  BOOLEAN_OPTION(total_order_seek, opts, options)
+  BOOLEAN_OPTION(prefix_same_as_start, opts, options)
+  BOOLEAN_OPTION(pin_data, opts, options)
+  BOOLEAN_OPTION(background_purge_on_iterator_cleanup, opts, options)
+  INT_OPTION(readahead_size, opts, options)
+  BOOLEAN_OPTION(ignore_range_deletions, opts, options)
+}
