@@ -13,4 +13,8 @@ class OptionsHelper {
   v8::Local<v8::String> name = Nan::New(#name).ToLocalChecked();        \
   if (opts->Has(name)) options->name = opts->Get(name)->BooleanValue();
 
+#define INT_OPTION(name, opts, options)                             \
+  v8::Local<v8::String> name = Nan::New(#name).ToLocalChecked();        \
+  if (opts->Has(name)) options->name = opts->Get(name)->IntegerValue();
+
 #endif  // OptionsHelper_h

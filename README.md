@@ -54,7 +54,6 @@ Developed against RocksDB 5.2.
 ## Rough TODO List
 
 * more nan, less direct v8
-* full support for Open options (only bool options supported so far)
 * support for ReadOptions and WriteOptions
 * iterators
 * support for atomic updates (batch)

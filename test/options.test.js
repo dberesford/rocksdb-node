@@ -25,9 +25,33 @@ test('options test', function (t) {
     fail_if_options_file_error: false,
     dump_malloc_stats: false,
     avoid_flush_during_recovery: false,
-    avoid_flush_during_shutdown: false
+    avoid_flush_during_shutdown: false,
 
+    max_open_files: -1,
+    max_file_opening_threads: 16,
+    max_total_wal_size: 0,
+    base_background_compactions: 1,
+    max_background_compactions: 1,
+    max_subcompactions: 1,
+    max_background_flushes: 1,
+    max_log_file_size: 0,
+    log_file_time_to_roll: 0,
+    keep_log_file_num: 1000,
+    recycle_log_file_num: 0,
+    table_cache_numshardbits: 0,
+    WAL_ttl_seconds: 0,
+    WAL_size_limit_MB: 0,
+    manifest_preallocation_size: 4 * 1024 * 1024,
+    db_write_buffer_size: 0,
+    compaction_readahead_size: 0,
+    random_access_max_buffer_size: 1024 * 1024,
+    writable_file_max_buffer_size: 1024 * 1024,
+    bytes_per_sync: 0,
+    wal_bytes_per_sync: 0,
+    write_thread_max_yield_usec: 100,
+    write_thread_slow_yield_usec: 3
   }
+
   const db = rocksdb(opts, '/tmp/rocksdbOptsTest')
   tap.ok(db)
   t.end()
