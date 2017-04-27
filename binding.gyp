@@ -6,6 +6,7 @@
         "rocksdb.cc",
         "PutWorker.cc",
         "GetWorker.cc",
+        "DeleteWorker.cc",
         "OptionsHelper.cc",
         "RocksDBNode.cc"
       ],

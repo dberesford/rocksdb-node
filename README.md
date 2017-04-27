@@ -17,6 +17,7 @@ const rocksdb = require('rocksdb-node')
 const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks')
 const value = db.get('node')
+db.del('node')
 
 // both keys and vals as buffers
 const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
@@ -36,6 +37,9 @@ db.put('node', 'rocks', function(err) {
   db.get('node', function (err, val) {
     if (err) return console.error(err);
     console.log(val)
+    db.del('node', function(err){
+      if (err) return console.error(err);      
+    })
   })
 })
 
@@ -61,7 +65,6 @@ Developed against RocksDB 5.2.
 
 ## Rough TODO List
 
-* more nan, less direct v8
 * iterators
 * support for atomic updates (batch)
 * support for snapshots

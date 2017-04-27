@@ -1,4 +1,4 @@
-const tap = require('tap')
+const os = require('os')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
@@ -52,8 +52,8 @@ test('options test', function (t) {
     write_thread_slow_yield_usec: 3
   }
 
-  const db = rocksdb(opts, '/tmp/rocksdbOptsTest')
-  tap.ok(db)
+  const db = rocksdb(opts, os.tmpdir() + '/rocksdbOptsTest')
+  t.ok(db)
 
   const writeOpts = {
     sync: false,
@@ -75,6 +75,6 @@ test('options test', function (t) {
     readahead_size: 0,
     ignore_range_deletions: false
   }
-  tap.equals(db.get(readOpts, 'foo'), 'bar')
+  t.equals(db.get(readOpts, 'foo'), 'bar')
   t.end()
 })

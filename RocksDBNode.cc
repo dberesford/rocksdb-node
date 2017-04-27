@@ -4,6 +4,7 @@
 #include "RocksDBNode.h"  
 #include "PutWorker.h"
 #include "GetWorker.h"
+#include "DeleteWorker.h"
 #include "OptionsHelper.h"
 #include "rocksdb/db.h"
 using namespace std;
@@ -28,6 +29,7 @@ void RocksDBNode::Init(v8::Local<v8::Object> exports) {
 
   NODE_SET_PROTOTYPE_METHOD(tpl, "put", RocksDBNode::Put);
   NODE_SET_PROTOTYPE_METHOD(tpl, "get", RocksDBNode::Get);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "del", RocksDBNode::Delete);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
@@ -152,17 +154,21 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 
   // TODO - check for key undefined or null
-  rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
-                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
-  rocksdb::Slice value = node::Buffer::HasInstance(args[valueIndex]) ? rocksdb::Slice(node::Buffer::Data(args[valueIndex]->ToObject()), node::Buffer::Length(args[valueIndex]->ToObject()))
-                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[valueIndex])));
+  v8::Local<v8::Object> keyObj = args[keyIndex].As<v8::Object>();
+  v8::Local<v8::Object> valueObj = args[valueIndex].As<v8::Object>();
   
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   rocksdb::Status s;
 
-  if (callback) {
-    Nan::AsyncQueueWorker(new PutWorker(callback, rocksDBNode->_db, key, value, options));
+  if (callback) {  
+    PutWorker *pw = new PutWorker(callback, rocksDBNode->_db, options, keyObj, valueObj);
+    Nan::AsyncQueueWorker(pw);
   } else {
+    rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(keyObj), node::Buffer::Length(keyObj))
+                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
+
+    rocksdb::Slice value = node::Buffer::HasInstance(args[valueIndex]) ? rocksdb::Slice(node::Buffer::Data(valueObj), node::Buffer::Length(valueObj))
+                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[valueIndex])));
     s = rocksDBNode->_db->Put(options, key, value);
     if (!s.ok()) {
       Nan::ThrowError(s.getState());
@@ -220,13 +226,14 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     callback = new Nan::Callback(args[callbackIndex].As<v8::Function>());
   }
 
-  rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
-                                                          : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
+  v8::Local<v8::Object> keyObj = args[keyIndex].As<v8::Object>();
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   
   if (callback) {
-    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, key, buffer, options));
+    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, buffer, options, keyObj));
   } else {
+    rocksdb::Slice key = node::Buffer::HasInstance(keyObj) ? rocksdb::Slice(node::Buffer::Data(keyObj), node::Buffer::Length(keyObj))
+                                                           : rocksdb::Slice(string(*Nan::Utf8String(keyObj)));
     string value;
     rocksdb::Status s = rocksDBNode->_db->Get(options, key, &value);
   
@@ -244,6 +251,60 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
       args.GetReturnValue().Set(Nan::CopyBuffer((char*)value.data(), value.size()).ToLocalChecked());
     } else {
       args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, value.c_str()));
+    }
+  }
+}
+
+void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int optsIndex = -1;
+  int keyIndex = -1;
+  int callbackIndex = -1;
+
+  // if only one arg, assume it's the key
+  if (args.Length() == 1) {
+    keyIndex = 0;
+  } else if (args.Length() == 2) {
+    // the two args are either (opts, key) or (key, callback)
+    if (args[1]->IsFunction()) {
+      keyIndex = 0;
+      callbackIndex = 1;
+    } else {
+      optsIndex = 0;
+      keyIndex = 1;
+    }
+  } else if (args.Length() == 3) {
+    optsIndex = 0;
+    keyIndex = 1;
+    callbackIndex = 2;
+  } else {
+    Nan::ThrowTypeError("Wrong number of arguments");
+    return;    
+  }
+
+  Nan::Callback *callback = NULL;
+  if (callbackIndex != -1) {
+    callback = new Nan::Callback(args[callbackIndex].As<v8::Function>());
+  }
+
+  rocksdb::WriteOptions options;
+  if (optsIndex != -1) {  
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessWriteOptions(opts, &options);
+  }
+
+  // TODO - check for key undefined or null
+  rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
+                                                            : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
+  
+  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  rocksdb::Status s;
+
+  if (callback) {
+    Nan::AsyncQueueWorker(new DeleteWorker(callback, rocksDBNode->_db, key, options));
+  } else {
+    s = rocksDBNode->_db->Delete(options, key);
+    if (!s.ok()) {
+      Nan::ThrowError(s.getState());
     }
   }
 }

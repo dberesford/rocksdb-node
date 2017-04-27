@@ -19,6 +19,7 @@ class RocksDBNode : public Nan::ObjectWrap {
   static v8::Persistent<v8::Function> constructor;
   static void Put(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Get(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void Delete(const v8::FunctionCallbackInfo<v8::Value>& info);
 
   rocksdb::DB* _db;
   rocksdb::Options _options;
