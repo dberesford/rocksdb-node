@@ -12,7 +12,7 @@ RockDB-node has both a synchronous and asynchronous api.
 
 Sync:
 
-```
+```javascript
 const rocksdb = require('rocksdb-node')
 const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks')
@@ -29,7 +29,7 @@ fs.writeFileSync('/tmp/beach2.jpg', beach)
 
 Async: 
 
-```
+```javascript
 const rocksdb = require('rocksdb-node')
 const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks', function(err) {
@@ -45,6 +45,12 @@ db.put('node', 'rocks', function(err) {
 
 ```
 
+Open database in read only mode:
+
+```javascript
+const dbRO = rocksdb({readOnly: true}, './myrocks') // myrocks must already exist
+```
+
 ## Options
 
 All RocksDB options are mostly supported for Open, Write and Read options, as defined in [options.h](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h). 
@@ -52,7 +58,7 @@ All RocksDB options are mostly supported for Open, Write and Read options, as de
 See [options.test.js](./test/options.test.js) for the definitive list.
 
 Examples:
-```
+```javascript
 const db = rocksdb({error_if_exists: true}}, '/tmp/my-rocks-database')
 
 db.put({sync: false}, 'foo', 'bar')

@@ -49,8 +49,16 @@ void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
     rocksdb::Options options;
     OptionsHelper::ProcessOpenOptions(opts, &options);
     
+    // check for readOnly flag - this is rocksdb-node specific
+    bool readOnly = false;
+    v8::Local<v8::String> roKey = Nan::New("readOnly").ToLocalChecked();  
+    if (opts->Has(roKey)) {
+      readOnly = opts->Get(roKey)->BooleanValue();
+    }
+
     rocksdb::DB* db;
-    rocksdb::Status s = rocksdb::DB::Open(options, path, &db);
+    rocksdb::Status s = readOnly ? rocksdb::DB::OpenForReadOnly(options, path, &db) 
+                                 : rocksdb::DB::Open(options, path, &db);
 
     if (!s.ok()) {
       Nan::ThrowError(s.getState());
