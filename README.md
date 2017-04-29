@@ -146,12 +146,12 @@ db.put(key, 'bar')
 
 ```javascript
 const writeOpts = {
-    sync: false,
-    disableWAL: false,
-    ignore_missing_column_families: false,
-    no_slowdown: false
-  }
-  db.put(writeOpts, 'foo', 'bar')
+  sync: false,
+  disableWAL: false,
+  ignore_missing_column_families: false,
+  no_slowdown: false
+}
+db.put(writeOpts, 'foo', 'bar')
 ```
 
 ### Get
@@ -180,17 +180,17 @@ const valueBuffer = db.get({buffer:true}, key)
 
 ```javascript
 const readOpts = {
-    verify_checksums: true,
-    fill_cache: true,
-    tailing: false,
-    managed: false,
-    total_order_seek: false,
-    prefix_same_as_start: false,
-    pin_data: false,
-    background_purge_on_iterator_cleanup: false,
-    readahead_size: 0,
-    ignore_range_deletions: false
-  }
+  verify_checksums: true,
+  fill_cache: true,
+  tailing: false,
+  managed: false,
+  total_order_seek: false,
+  prefix_same_as_start: false,
+  pin_data: false,
+  background_purge_on_iterator_cleanup: false,
+  readahead_size: 0,
+  ignore_range_deletions: false
+}
 const bar = db.get(readOpts, 'foo')
 ```
 
@@ -220,12 +220,12 @@ db.del(key)
 
 ```javascript
 const writeOpts = {
-    sync: false,
-    disableWAL: false,
-    ignore_missing_column_families: false,
-    no_slowdown: false
-  }
-  db.del(writeOpts, 'foo')
+  sync: false,
+  disableWAL: false,
+  ignore_missing_column_families: false,
+  no_slowdown: false
+}
+db.del(writeOpts, 'foo')
 ```
 
 ### Iteratation
@@ -249,8 +249,8 @@ Creates a new Iterator for the current database. Optionally takes [ReadOptions](
 
 ```javascript
 const readOpts = {
-    verify_checksums: true
-  }
+  verify_checksums: true
+}
 const iter = db.newIterator(readOpts)
 ```
 
@@ -301,8 +301,8 @@ Note if the key is a buffer, you need to pass the `buffer:true` flag
 
 ```javascript
 for (it.seekToFirst(); it.valid(); it.next()) {
-    const k = it.key({buffer: true})
-    const v = it.value({buffer: true})
+  const k = it.key({buffer: true})
+  const v = it.value({buffer: true})
 ...
 ```
 
