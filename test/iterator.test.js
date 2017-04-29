@@ -4,8 +4,6 @@ const rimraf = require('rimraf')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
-// var SegfaultHandler = require('segfault-handler')
-// SegfaultHandler.registerHandler('crash.log')
 test('iterator with strings', function (t) {
   rimraf.sync(os.tmpdir() + '/rocksdbIteratorStringTest')
   const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbIteratorStringTest')

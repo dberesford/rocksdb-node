@@ -27,7 +27,6 @@ test('delete non-existent key', function (t) {
   t.end()
 })
 
-// TODO - this is failing with a weird crash..
 test('wrong args constructor', function (t) {
   t.throws(function () {
     rocksdb()
