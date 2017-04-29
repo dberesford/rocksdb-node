@@ -8,6 +8,7 @@
         "GetWorker.cc",
         "DeleteWorker.cc",
         "OptionsHelper.cc",
+        "Iterator.cc",
         "RocksDBNode.cc"
       ],
       'include_dirs' : [

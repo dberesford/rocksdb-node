@@ -6,6 +6,7 @@
 #include "GetWorker.h"
 #include "DeleteWorker.h"
 #include "OptionsHelper.h"
+#include "Iterator.h"
 #include "rocksdb/db.h"
 using namespace std;
 
@@ -30,6 +31,7 @@ void RocksDBNode::Init(v8::Local<v8::Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "put", RocksDBNode::Put);
   NODE_SET_PROTOTYPE_METHOD(tpl, "get", RocksDBNode::Get);
   NODE_SET_PROTOTYPE_METHOD(tpl, "del", RocksDBNode::Delete);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "newIterator", RocksDBNode::NewIterator);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
@@ -315,4 +317,8 @@ void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
       Nan::ThrowError(s.getState());
     }
   }
+}
+
+void RocksDBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Iterator::NewInstance(args);
 }
