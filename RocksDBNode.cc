@@ -32,6 +32,7 @@ void RocksDBNode::Init(v8::Local<v8::Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "get", RocksDBNode::Get);
   NODE_SET_PROTOTYPE_METHOD(tpl, "del", RocksDBNode::Delete);
   NODE_SET_PROTOTYPE_METHOD(tpl, "newIterator", RocksDBNode::NewIterator);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "listColumnFamilies", RocksDBNode::ListColumnFamilies);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
@@ -321,4 +322,22 @@ void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void RocksDBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Iterator::NewInstance(args);
+}
+
+void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  std::vector<std::string> families;
+  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  rocksdb::Status s;
+
+  s = rocksdb::DB::ListColumnFamilies(rocksDBNode->_options, rocksDBNode->_path, &families);
+  if (!s.ok()) {
+    Nan::ThrowError(s.getState());
+  }
+
+  v8::Local<v8::Array> arr = Nan::New<v8::Array>();
+  for (std::vector<string>::iterator it = families.begin() ; it != families.end(); ++it) {
+    Nan::Set(arr, it - families.begin(), Nan::New(*it).ToLocalChecked());
+  }
+  
+  args.GetReturnValue().Set(arr);  
 }

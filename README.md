@@ -329,6 +329,22 @@ const err = it.status()
 if (err) throw err;
 ```
 
+### Column Families
+
+The Column Family API matches the Rocks [Column Families](https://github.com/facebook/rocksdb/wiki/Column-Families).
+
+#### listColumnFamilies
+
+Lists all the Column Families in the database. Note his slightly differs from the Rocks API in that the db must already be open. 
+Returns a javascript array containing all the Column Family names in the database, e.g.
+
+```javascript
+
+db = rocksdb({create_if_missing: true}, './myrocks')
+const families = db.listColumnFamilies(); 
+console.log(families)
+```
+
 ## Rough TODO List
 
 * support for atomic updates (batch)

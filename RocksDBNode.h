@@ -24,6 +24,7 @@ class RocksDBNode : public Nan::ObjectWrap {
   static void Get(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Delete(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void NewIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
 
   rocksdb::DB* _db;
   rocksdb::Options _options;
