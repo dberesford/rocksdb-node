@@ -4,6 +4,14 @@ Node native binding for RocksDB. Aims to be a full nodejs mapping for https://gi
 
 ## Installation
 
+First install RocksDB:
+
+Mac: `brew install rocksdb`
+
+Linux and other platforms, see RocksDB [install guide](https://github.com/facebook/rocksdb/blob/master/INSTALL.md).
+
+Then npm install rocksdb-node:
+
 `npm i rocksdb-node --save`
 
 ## Sample Usage
