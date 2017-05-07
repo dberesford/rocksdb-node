@@ -6,7 +6,7 @@
 
 class PutWorker : public Nan::AsyncWorker {
  public:
-  PutWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::WriteOptions options, v8::Local<v8::Object> &keyObj, v8::Local<v8::Object> &valueObj);
+  PutWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::WriteOptions options, rocksdb::ColumnFamilyHandle *family, v8::Local<v8::Object> &keyObj, v8::Local<v8::Object> &valueObj);
   ~PutWorker();
   virtual void Execute();
   virtual void HandleOKCallback ();
@@ -17,6 +17,7 @@ class PutWorker : public Nan::AsyncWorker {
   rocksdb::Slice _value;
   rocksdb::Status _status;
   rocksdb::WriteOptions _options;
+  rocksdb::ColumnFamilyHandle *_family;
   v8::Local<v8::Object> _keyObj;
 };
 

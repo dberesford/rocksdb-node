@@ -2,8 +2,8 @@
 #include "GetWorker.h"  
 #include "rocksdb/db.h"
 
-GetWorker::GetWorker(Nan::Callback *callback, rocksdb::DB *db, bool buffer, rocksdb::ReadOptions options, v8::Local<v8::Object> &keyObj)
-    : AsyncWorker(callback), _db(db), _buffer(buffer), _options(options), _keyObj(keyObj) {
+GetWorker::GetWorker(Nan::Callback *callback, rocksdb::DB *db, bool buffer, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *family, v8::Local<v8::Object> &keyObj)
+    : AsyncWorker(callback), _db(db), _buffer(buffer), _options(options), _family(family), _keyObj(keyObj) {
   SaveToPersistent("key", keyObj);
   _key = node::Buffer::HasInstance(keyObj) ? rocksdb::Slice(node::Buffer::Data(keyObj), node::Buffer::Length(keyObj))
                                            : rocksdb::Slice(std::string(*Nan::Utf8String(keyObj)));
@@ -12,7 +12,7 @@ GetWorker::GetWorker(Nan::Callback *callback, rocksdb::DB *db, bool buffer, rock
 GetWorker::~GetWorker() {}
 
 void GetWorker::Execute () {
-  _status = _db->Get(_options, _key, &_value);
+  _status = _db->Get(_options, _family, _key, &_value);
 }
 
 void GetWorker::HandleOKCallback () {

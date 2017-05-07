@@ -6,7 +6,7 @@
 
 class GetWorker : public Nan::AsyncWorker {
  public:
-  GetWorker(Nan::Callback *callback, rocksdb::DB *db, bool isBuffer, rocksdb::ReadOptions options, v8::Local<v8::Object> &keyObj);
+  GetWorker(Nan::Callback *callback, rocksdb::DB *db, bool isBuffer, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *family, v8::Local<v8::Object> &keyObj);
   ~GetWorker();
   virtual void Execute();
   virtual void HandleOKCallback ();
@@ -18,6 +18,7 @@ class GetWorker : public Nan::AsyncWorker {
   rocksdb::Status _status;
   bool _buffer;
   rocksdb::ReadOptions _options;
+  rocksdb::ColumnFamilyHandle *_family;
   v8::Local<v8::Object> _keyObj;
 };
 

@@ -2,8 +2,8 @@
 #include "PutWorker.h"  
 #include "rocksdb/db.h"
 
-PutWorker::PutWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::WriteOptions options, v8::Local<v8::Object> &keyObj, v8::Local<v8::Object> &valueObj)
-    : AsyncWorker(callback), _db(db), _options(options), _keyObj(keyObj) {
+PutWorker::PutWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::WriteOptions options, rocksdb::ColumnFamilyHandle *family, v8::Local<v8::Object> &keyObj, v8::Local<v8::Object> &valueObj)
+    : AsyncWorker(callback), _db(db), _options(options), _family(family), _keyObj(keyObj) {
       SaveToPersistent("key", keyObj);
       SaveToPersistent("value", valueObj);
 
@@ -16,7 +16,7 @@ PutWorker::PutWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::WriteOpt
 PutWorker::~PutWorker() {}
 
 void PutWorker::Execute () {
-  _status = _db->Put(_options, _key, _value);
+  _status = _db->Put(_options, _family, _key, _value);
 }
 
 void PutWorker::HandleOKCallback () {

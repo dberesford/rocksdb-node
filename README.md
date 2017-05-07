@@ -125,7 +125,7 @@ const dbRO = rocksdb({readOnly: true}, './myrocks') // myrocks must already exis
 
 ### Put
 
-`db.put` has both a synchronous and asynchronous interface, e.g. 
+ `db.put(<options>, <column-family>, key, value, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -162,9 +162,16 @@ const writeOpts = {
 db.put(writeOpts, 'foo', 'bar')
 ```
 
+Column Families are also supported for put:
+
+```javascript
+db.createColumnFamily('myFamily')
+db.put('myFamily', 'foo', 'bar')
+```
+
 ### Get
 
-`db.get` has both a synchronous and asynchronous interface, e.g. 
+ `db.get(<options>, <column-family>, key, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -202,9 +209,18 @@ const readOpts = {
 const bar = db.get(readOpts, 'foo')
 ```
 
+Column Families are also supported for put:
+
+```javascript
+db.createColumnFamily('myFamily')
+db.put('myFamily', 'foo', 'bar')
+var value = db.get('myFamily', 'foo')
+```
+
+
 ### Delete
 
-`db.del` has both a synchronous and asynchronous interface, e.g. 
+`db.del(<options>, <column-family>, key,  <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -234,6 +250,14 @@ const writeOpts = {
   no_slowdown: false
 }
 db.del(writeOpts, 'foo')
+```
+
+Column Families are also supported for del:
+
+```javascript
+db.createColumnFamily('myFamily')
+db.put('myFamily', 'foo', 'bar')
+db.del('myFamily', 'foo')
 ```
 
 ### Iteratation
@@ -331,18 +355,36 @@ if (err) throw err;
 
 ### Column Families
 
-The Column Family API matches the Rocks [Column Families](https://github.com/facebook/rocksdb/wiki/Column-Families).
+The Column Family API mostly matches the Rocks [Column Families](https://github.com/facebook/rocksdb/wiki/Column-Families), with some additional utility methods. 
+Open, Put, Get, Delete all support Column Families. When a database is opened, it is queried for it's Column Families and all are opened. 
 
-#### listColumnFamilies
+#### getColumnFamilies
 
-Lists all the Column Families in the database. Note his slightly differs from the Rocks API in that the db must already be open. 
-Returns a javascript array containing all the Column Family names in the database, e.g.
+Get all the Column Families in an open database. 
+Returns a javascript array containing all the Column Family names:
 
 ```javascript
 
 db = rocksdb({create_if_missing: true}, './myrocks')
-const families = db.listColumnFamilies(); 
+const families = db.getColumnFamilies(); 
 console.log(families)
+```
+
+#### createColumnFamily
+
+Creates a new Column Family:
+
+```javascript 
+db.createColumnFamily('myFamily')
+db.put('myFamily', 'foo', 'bar')
+```
+
+#### dropColumnFamily
+
+Drops a Column Family:
+
+```javascript 
+db.dropColumnFamily('myFamily')
 ```
 
 ## Rough TODO List

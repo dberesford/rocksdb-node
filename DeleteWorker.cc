@@ -2,12 +2,12 @@
 #include "DeleteWorker.h"  
 #include "rocksdb/db.h"
 
-DeleteWorker::DeleteWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::Slice key, rocksdb::WriteOptions options)
-    : AsyncWorker(callback), _db(db), _key(key), _options(options) {}
+DeleteWorker::DeleteWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *family, rocksdb::Slice key, rocksdb::WriteOptions options)
+    : AsyncWorker(callback), _db(db), _family(family), _key(key), _options(options) {}
 DeleteWorker::~DeleteWorker() {}
 
 void DeleteWorker::Execute () {
-  _status = _db->Delete(_options, _key);
+  _status = _db->Delete(_options, _family, _key);
 }
 
 void DeleteWorker::HandleOKCallback () {

@@ -14,8 +14,11 @@ class RocksDBNode : public Nan::ObjectWrap {
   inline rocksdb::DB* db() { return _db;}
   
  private:
-  explicit RocksDBNode(rocksdb::Options options, string path, rocksdb::DB* db);
+  explicit RocksDBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles);
   ~RocksDBNode();
+  
+  rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
+  rocksdb::Status DeleteColumnFamily(string family);
 
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
   
@@ -24,11 +27,14 @@ class RocksDBNode : public Nan::ObjectWrap {
   static void Get(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Delete(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void NewIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
 
-  rocksdb::DB* _db;
+  rocksdb::DB *_db;
   rocksdb::Options _options;
   string _path;
+  std::vector<rocksdb::ColumnFamilyHandle*> *_cfHandles;
 
 };
 
