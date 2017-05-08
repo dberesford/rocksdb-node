@@ -3,10 +3,11 @@ const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
 test('setup', function (t) {
-  const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbReadOnlyTest')
+  const path = os.tmpdir() + '/rocksdbReadOnlyTest'
+  const db = rocksdb.open({create_if_missing: true}, path)
   db.put('foo', 'bar')
 
-  const dbRO = rocksdb({readOnly: true}, os.tmpdir() + '/rocksdbReadOnlyTest')
+  const dbRO = rocksdb.open({readOnly: true}, path)
   t.equal(dbRO.get('foo'), 'bar')
   let gotException = false
   try {

@@ -2,11 +2,12 @@ const os = require('os')
 const rimraf = require('rimraf')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
+const path = os.tmpdir() + '/rocksdbColumnsTest'
 let db
 
 test('setup', function (t) {
-  rimraf.sync(os.tmpdir() + '/rocksdbColumnsTest')
-  db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbColumnsTest')
+  rimraf.sync(path)
+  db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
   t.end()
 })
@@ -88,7 +89,7 @@ test('invalid columns async', function (t) {
 })
 
 test('open readonly', function (t) {
-  const db2 = rocksdb({readOnly: true}, os.tmpdir() + '/rocksdbColumnsTest')
+  const db2 = rocksdb.open({readOnly: true}, path)
   t.ok(db2)
   t.ok(db2.getColumnFamilies())
   t.end()

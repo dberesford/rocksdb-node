@@ -460,26 +460,6 @@ void RocksDBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Iterator::NewInstance(args);
 }
 
-/* TODO - revisit this - should match the rocks API
-void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  std::vector<std::string> families;
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
-  rocksdb::Status s;
-
-  s = rocksdb::DB::ListColumnFamilies(rocksDBNode->_options, rocksDBNode->_path, &families);
-  if (!s.ok()) {
-    Nan::ThrowError(s.getState());
-  }
-
-  v8::Local<v8::Array> arr = Nan::New<v8::Array>();
-  for (std::vector<string>::iterator it = families.begin() ; it != families.end(); ++it) {
-    Nan::Set(arr, it - families.begin(), Nan::New(*it).ToLocalChecked());
-  }
-  
-  args.GetReturnValue().Set(arr);  
-}
-*/
-
 void RocksDBNode::GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   std::vector<std::string> families;
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
@@ -579,6 +559,46 @@ void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& ar
   
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
-  }
-    
+  }    
 }
+
+// TODO - move this out of here
+void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int optsIndex = -1;
+  int pathIndex = -1;
+  
+  // 2 args, assume (opts, path)
+  if (args.Length() == 1) {
+    pathIndex = 0;
+  } else if (args.Length() == 2) {
+    optsIndex = 0;
+    pathIndex = 1;
+  } else {
+    Nan::ThrowTypeError("Wrong number of arguments");
+    return;    
+  }
+
+  rocksdb::Options options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessOpenOptions(opts, &options);
+  }
+
+  string path = string(*Nan::Utf8String(args[pathIndex]));
+      
+  std::vector<std::string> familyNames;
+  rocksdb::Status s = rocksdb::DB::ListColumnFamilies(options, path, &familyNames);
+
+  if (!s.ok()) {
+    Nan::ThrowError(s.getState());
+    return;
+  }
+
+  v8::Local<v8::Array> arr = Nan::New<v8::Array>();
+  for (std::vector<string>::iterator it = familyNames.begin() ; it != familyNames.end(); ++it) {
+    Nan::Set(arr, it - familyNames.begin(), Nan::New(*it).ToLocalChecked());
+  }
+  
+  args.GetReturnValue().Set(arr);  
+}
+

@@ -52,7 +52,7 @@ test('options test', function (t) {
     write_thread_slow_yield_usec: 3
   }
 
-  const db = rocksdb(opts, os.tmpdir() + '/rocksdbOptsTest')
+  const db = rocksdb.open(opts, os.tmpdir() + '/rocksdbOptsTest')
   t.ok(db)
 
   const writeOpts = {

@@ -5,8 +5,9 @@ const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
 test('iterator with strings', function (t) {
-  rimraf.sync(os.tmpdir() + '/rocksdbIteratorStringTest')
-  const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbIteratorStringTest')
+  const path = os.tmpdir() + '/rocksdbIteratorStringTest'
+  rimraf.sync(path)
+  const db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
 
   db.put('foo', 'bar')
@@ -35,8 +36,9 @@ test('iterator with strings', function (t) {
 })
 
 test('iterator with buffers', function (t) {
-  rimraf.sync(os.tmpdir() + '/rocksdbIteratorBufferTest')
-  const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbIteratorBufferTest')
+  const path = os.tmpdir() + '/rocksdbIteratorBufferTest'
+  rimraf.sync(path)
+  const db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
 
   const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
@@ -60,8 +62,9 @@ test('iterator with buffers', function (t) {
 })
 
 test('iterator seek', function (t) {
-  rimraf.sync(os.tmpdir() + '/rocksdbIteratorSeekTest')
-  const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbIteratorSeekTest')
+  const path = os.tmpdir() + '/rocksdbIteratorSeekTest'
+  rimraf.sync(path)
+  const db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
 
   db.put('1', 'one')
@@ -87,8 +90,9 @@ test('iterator seek', function (t) {
 })
 
 test('iterator seek buffers', function (t) {
-  rimraf.sync(os.tmpdir() + '/rocksdbIteratorSeekBufferTest')
-  const db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbIteratorSeekBufferTest')
+  const path = os.tmpdir() + '/rocksdbIteratorSeekBufferTest'
+  rimraf.sync(path)
+  const db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
 
   const a = Buffer.from('A')

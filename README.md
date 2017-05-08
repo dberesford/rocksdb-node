@@ -20,7 +20,7 @@ Sync examples:
 
 ```javascript
 const rocksdb = require('rocksdb-node')
-const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
+const db = rocksdb.open({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks')
 const value = db.get('node')
 db.del('node')
@@ -37,7 +37,7 @@ Async examples:
 
 ```javascript
 const rocksdb = require('rocksdb-node')
-const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
+const db = rocksdb.open({create_if_missing: true}, '/tmp/my-rocks-database')
 db.put('node', 'rocks', function(err) {
   if (err) return console.error(err);
   db.get('node', function (err, val) {
@@ -53,11 +53,22 @@ db.put('node', 'rocks', function(err) {
 
 ## API
 
+'rocksdb-node' currently exports two functions:
+
+```javascript 
+{
+  open,
+  listColulmFamilies
+}
+```
+
+The `open` function opens a database and returns an object that you use to call further functions on the database.
+
 ### Open
 
 ```javascript
 const rocksdb = require('rocksdb-node')
-const db = rocksdb({create_if_missing: true}, '/tmp/my-rocks-database')
+const db = rocksdb.open({create_if_missing: true}, '/tmp/my-rocks-database')
 ```
 
 Note that passing an options object is required, even if it's empty.
@@ -120,10 +131,12 @@ const opts = {
 Open database for read only. All DB interfaces that modify data, like put/delete, will return error.
 
 ```javascript
-const dbRO = rocksdb({readOnly: true}, './myrocks') // myrocks must already exist
+const dbRO = rocksdb.open({readOnly: true}, './myrocks') // myrocks must already exist
 ```
 
-### Put
+Once you have a database object from a successful call to `open`, the following functions are available:
+
+#### Put
 
  `db.put(<options>, <column-family>, key, value, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
@@ -169,7 +182,7 @@ db.createColumnFamily('myFamily')
 db.put('myFamily', 'foo', 'bar')
 ```
 
-### Get
+#### Get
 
  `db.get(<options>, <column-family>, key, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
@@ -217,8 +230,7 @@ db.put('myFamily', 'foo', 'bar')
 var value = db.get('myFamily', 'foo')
 ```
 
-
-### Delete
+#### Delete
 
 `db.del(<options>, <column-family>, key,  <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
 
@@ -260,7 +272,7 @@ db.put('myFamily', 'foo', 'bar')
 db.del('myFamily', 'foo')
 ```
 
-### Iteratation
+#### Iteration
 
 The Iterator API matches the Rocks [Iterator API](https://github.com/facebook/rocksdb/wiki/Basic-Operations#iteration). Note the Iterator API is synchronous.
 
@@ -275,7 +287,7 @@ if (err) throw err;
 
 The following Rocks [Iterator API](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/iterator.h#L29) is supported (documentation has been copied from there):
 
-#### iterator.newIterator()
+##### iterator.newIterator()
 
 Creates a new Iterator for the current database. Optionally takes [ReadOptions](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h#L1444), e.g.
 
@@ -286,19 +298,19 @@ const readOpts = {
 const iter = db.newIterator(readOpts)
 ```
 
-#### iterator.valid()
+##### iterator.valid()
 
 An iterator is either positioned at a key/value pair, or not valid. This method returns true iff the iterator is valid.
 
-#### iterator.seekToFirst()
+##### iterator.seekToFirst()
 
 Position at the first key in the source. The iterator is Valid() after this call iff the source is not empty.
 
-#### iterator.seekToLast()
+##### iterator.seekToLast()
 
 Position at the last key in the source. The iterator is Valid() after this call iff the source is not empty.
 
-#### iterator.seek()
+##### iterator.seek()
 
 Position at the first key in the source that at or past target. The iterator is Valid() after this call iff the source contains an entry that comes at or past target.
 
@@ -313,19 +325,19 @@ for (it.seek('2'); it.valid(); it.next()) {
 }
 ```
 
-#### iterator.seekForPrev()
+##### iterator.seekForPrev()
 
 Position at the last key in the source that at or before target. The iterator is Valid() after this call iff the source contains an entry that comes at or before target.
 
-#### iterator.next()
+##### iterator.next()
 
 Moves to the next entry in the source.  After this call, Valid() is true iff the iterator was not positioned at the last entry in the source.
 
-#### iterator.prev()
+##### iterator.prev()
 
 Moves to the previous entry in the source.  After this call, Valid() is true iff the iterator was not positioned at the first entry in source.
 
-#### iterator.key() 
+##### iterator.key() 
 
 Return the key for the current entry.  The underlying storage for the returned slice is valid only until the next modification of the iterator.
 
@@ -338,13 +350,13 @@ for (it.seekToFirst(); it.valid(); it.next()) {
 ...
 ```
 
-#### iterator.value() 
+##### iterator.value() 
 
 Return the value for the current entry.  The underlying storage for the returned slice is valid only until the next modification of the iterator.
 
 As with `iterator.key` if the value is a buffer, you need to pass the `buffer:true` flag
 
-#### iterator.status()
+##### iterator.status()
 
 If an error has occurred, return it. A javascript Error object is returned if an error occurred, otherwise null.
 
@@ -353,24 +365,24 @@ const err = it.status()
 if (err) throw err;
 ```
 
-### Column Families
+#### Column Families
 
 The Column Family API mostly matches the Rocks [Column Families](https://github.com/facebook/rocksdb/wiki/Column-Families), with some additional utility methods. 
 Open, Put, Get, Delete all support Column Families. When a database is opened, it is queried for it's Column Families and all are opened. 
 
-#### getColumnFamilies
+##### getColumnFamilies
 
 Get all the Column Families in an open database. 
 Returns a javascript array containing all the Column Family names:
 
 ```javascript
 
-db = rocksdb({create_if_missing: true}, './myrocks')
+db = rocksdb.open({create_if_missing: true}, './myrocks')
 const families = db.getColumnFamilies(); 
 console.log(families)
 ```
 
-#### createColumnFamily
+##### createColumnFamily
 
 Creates a new Column Family:
 
@@ -379,12 +391,27 @@ db.createColumnFamily('myFamily')
 db.put('myFamily', 'foo', 'bar')
 ```
 
-#### dropColumnFamily
+##### dropColumnFamily
 
 Drops a Column Family:
 
 ```javascript 
 db.dropColumnFamily('myFamily')
+```
+
+### List Column Families
+
+It's also possible to query a database for it's Column Families without opening the database:
+
+```javascript
+const rocksdb = require('rocksdb-node')
+const families = rocksdb.listColumnFamilies('./myrocks')
+```
+
+Note `listColumnFamilies` can also take the same options that you can pass to open, e.g. 
+
+```javascript
+const families = rocksdb.listColumnFamilies({paranoid_checks: true}, './myrocks')
 ```
 
 ## Rough TODO List
@@ -396,4 +423,3 @@ db.dropColumnFamily('myFamily')
 * support for filters
 * support js environment support (rocksdb::env)
 * full support for rocks specific api https://github.com/facebook/rocksdb/wiki/Features-Not-in-LevelDB
-

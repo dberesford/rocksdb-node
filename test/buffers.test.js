@@ -4,11 +4,8 @@ const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 let db
 
-var SegfaultHandler = require('segfault-handler')
-SegfaultHandler.registerHandler('crash.log')
-
 test('setup', function (t) {
-  db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbBuffersTest')
+  db = rocksdb.open({create_if_missing: true}, os.tmpdir() + '/rocksdbBuffersTest')
   t.ok(db)
   t.end()
 })

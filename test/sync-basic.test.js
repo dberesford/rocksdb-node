@@ -4,7 +4,7 @@ const rocksdb = require('../build/Release/rocksdb.node')
 let db
 
 test('setup', function (t) {
-  db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbBasicTest')
+  db = rocksdb.open({create_if_missing: true}, os.tmpdir() + '/rocksdbBasicTest')
   t.ok(db)
   t.end()
 })
@@ -29,7 +29,7 @@ test('delete non-existent key', function (t) {
 
 test('wrong args constructor', function (t) {
   t.throws(function () {
-    rocksdb()
+    rocksdb.open()
   }, /Wrong number of arguments/)
 
   t.end()

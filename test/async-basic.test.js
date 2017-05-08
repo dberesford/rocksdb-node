@@ -4,7 +4,7 @@ const rocksdb = require('../build/Release/rocksdb.node')
 let db
 
 test('setup', function (t) {
-  db = rocksdb({create_if_missing: true}, os.tmpdir() + '/rocksdbSyncBasicTest')
+  db = rocksdb.open({create_if_missing: true}, os.tmpdir() + '/rocksdbSyncBasicTest')
   t.ok(db)
   t.end()
 })
