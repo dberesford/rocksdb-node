@@ -289,13 +289,24 @@ The following Rocks [Iterator API](https://github.com/facebook/rocksdb/blob/mast
 
 ##### iterator.newIterator()
 
-Creates a new Iterator for the current database. Optionally takes [ReadOptions](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h#L1444), e.g.
+`db.newIterator(<read-options>, <column-family>)` where <read-options> and  <column-family>optional.
+
+Creates a new Iterator for the current database. Optionally takes [ReadOptions](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h#L1444) or a ColumnFamily name.
 
 ```javascript
 const readOpts = {
   verify_checksums: true
 }
 const iter = db.newIterator(readOpts)
+```
+
+Can also optionally take a Column Family Name, e.g. 
+
+```javascript
+db.createColumnFamily('foo')
+db.put('foo', 'hello', 'world')
+const iter = db.newIterator('foo')
+...
 ```
 
 ##### iterator.valid()

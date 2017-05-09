@@ -8,8 +8,12 @@
 
 Nan::Persistent<v8::FunctionTemplate> iterator_constructor;
 
-Iterator::Iterator (rocksdb::ReadOptions options, rocksdb::DB* db) {
-  _it = db->NewIterator(options);
+Iterator::Iterator (rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *handle, rocksdb::DB* db) {
+  if (handle != NULL) {
+    _it = db->NewIterator(options, handle);
+  } else {
+    _it = db->NewIterator(options);
+  }
 }
 
 Iterator::~Iterator () {
@@ -34,14 +38,27 @@ void Iterator::Init() {
 
 NAN_METHOD(Iterator::New) {
   // We expect either one or two opts - ReadOptions can be optional, and the RocksDBNode object which is creating the Iterator is the second option
+  // We expect newIterator(<options>, <columnFamilyName>, rocksDBNode), where both options and columnFamilyName are both optional
   int optsIndex = -1;
+  int columnFamilyIndex = -1;
   int rocksIndex = -1;
 
   if (info.Length() == 1) {
     rocksIndex = 0;
   } else if (info.Length() == 2) {
+    // newIterator(options, rocksDBNode)
+    if (info[0]->IsObject()) {
+      optsIndex = 0;
+      rocksIndex = 1;
+    } else {
+      // newIterator(columnFamilyName, rocksDBNode)
+      columnFamilyIndex = 0;
+      rocksIndex = 1;
+    }
+  } else if (info.Length() == 3) {
     optsIndex = 0;
-    rocksIndex = 1;
+    columnFamilyIndex = 1;
+    rocksIndex = 2;
   } else {
     Nan::ThrowTypeError("Wrong number of arguments");
     return;
@@ -54,7 +71,14 @@ NAN_METHOD(Iterator::New) {
   }
 
   RocksDBNode* rocks = Nan::ObjectWrap::Unwrap<RocksDBNode>(info[rocksIndex].As<v8::Object>());   
-  Iterator* obj = new Iterator(options, rocks->db());
+
+  rocksdb::ColumnFamilyHandle *columnFamily = NULL;
+  if (columnFamilyIndex != -1) {
+    string family = string(*Nan::Utf8String(info[columnFamilyIndex]));
+    columnFamily = rocks->GetColumnFamily(family);
+  }
+
+  Iterator* obj = new Iterator(options, columnFamily, rocks->db());
   obj->Wrap(info.This());
   info.GetReturnValue().Set(info.This());
 }

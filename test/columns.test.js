@@ -94,3 +94,26 @@ test('open readonly', function (t) {
   t.ok(db2.getColumnFamilies())
   t.end()
 })
+
+test('column iterator', function (t) {
+  db.createColumnFamily('abc')
+  db.put('abc', 'hello', 'world')
+
+  const it = db.newIterator('abc')
+  t.ok(it)
+
+  let count = 0
+  for (it.seekToFirst(); it.valid(); it.next()) {
+    t.equal(it.key(), 'hello')
+    t.equal(it.value(), 'world')
+    count++
+  }
+  t.equal(count, 1)
+  t.end()
+})
+
+test('invalid column iterator', function (t) {  
+  const it = db.newIterator('idontexist')
+  t.ok(!it.valid())
+  t.end()
+})

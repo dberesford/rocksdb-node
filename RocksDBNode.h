@@ -13,12 +13,12 @@ class RocksDBNode : public Nan::ObjectWrap {
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
   inline rocksdb::DB* db() { return _db;}
   static void ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
+  rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
   
  private:
   explicit RocksDBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles);
   ~RocksDBNode();
   
-  rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
   rocksdb::Status DeleteColumnFamily(string family);
 
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
