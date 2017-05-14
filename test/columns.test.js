@@ -112,7 +112,7 @@ test('column iterator', function (t) {
   t.end()
 })
 
-test('invalid column iterator', function (t) {  
+test('invalid column iterator', function (t) {
   const it = db.newIterator('idontexist')
   t.ok(!it.valid())
   t.end()

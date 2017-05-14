@@ -99,7 +99,6 @@ const opts = {
     dump_malloc_stats: false,
     avoid_flush_during_recovery: false,
     avoid_flush_during_shutdown: false,
-
     max_open_files: -1,
     max_file_opening_threads: 16,
     max_total_wal_size: 0,
@@ -424,13 +423,33 @@ Note `listColumnFamilies` can also take the same options that you can pass to op
 ```javascript
 const families = rocksdb.listColumnFamilies({paranoid_checks: true}, './myrocks')
 ```
+### Batch Updates
 
-## Rough TODO List
+Support for [Batch Updates](https://github.com/facebook/rocksdb/wiki/Basic-Operations#atomic-updates):
 
-* support for atomic updates (batch)
-* support for snapshots
-* support for js comparators
-* support for cache
-* support for filters
-* support js environment support (rocksdb::env)
-* full support for rocks specific api https://github.com/facebook/rocksdb/wiki/Features-Not-in-LevelDB
+```javascript
+  const batch = db.batch()
+  batch.put('k1', 'v1')
+  batch.del('k1')
+  db.write(batch)
+```
+Note that the batch API is synchronous. Column Families are supported:
+
+```javascript
+  db.createColumnFamily('foo')
+  const batch = db.batch()
+  batch.put('foo', 'k1', 'v1')
+  batch.del('foo', 'k1')
+  db.write(batch)
+```
+
+Note also that `WriteOptions` can be passed to `write`, e.g. 
+
+```javascript
+  const opts = {
+    sync: false,
+  }
+  const batch = db.batch()
+  batch.put('k2', 'v2')
+  db.write(opts, batch)
+```

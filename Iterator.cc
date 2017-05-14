@@ -23,7 +23,7 @@ void Iterator::Init() {
   v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(Iterator::New);
   tpl->SetClassName(Nan::New("Iterator").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
-  
+
   Nan::SetPrototypeMethod(tpl, "seekToFirst", Iterator::SeekToFirst);
   Nan::SetPrototypeMethod(tpl, "seekToLast", Iterator::SeekToLast);
   Nan::SetPrototypeMethod(tpl, "seek", Iterator::Seek);
@@ -37,7 +37,6 @@ void Iterator::Init() {
 }
 
 NAN_METHOD(Iterator::New) {
-  // We expect either one or two opts - ReadOptions can be optional, and the RocksDBNode object which is creating the Iterator is the second option
   // We expect newIterator(<options>, <columnFamilyName>, rocksDBNode), where both options and columnFamilyName are both optional
   int optsIndex = -1;
   int columnFamilyIndex = -1;
@@ -66,11 +65,11 @@ NAN_METHOD(Iterator::New) {
 
   rocksdb::ReadOptions options;
   if (optsIndex != -1) {
-    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();    
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
     OptionsHelper::ProcessReadOptions(opts, &options);
   }
 
-  RocksDBNode* rocks = Nan::ObjectWrap::Unwrap<RocksDBNode>(info[rocksIndex].As<v8::Object>());   
+  RocksDBNode* rocks = Nan::ObjectWrap::Unwrap<RocksDBNode>(info[rocksIndex].As<v8::Object>());
 
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (columnFamilyIndex != -1) {
@@ -85,7 +84,7 @@ NAN_METHOD(Iterator::New) {
 
 void Iterator::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
-  
+
   // Note: we pass an additional argument here which is the RocksDBNode object
   // that is creating the new Iterator. Iterators can't be created anywhere else.
   const unsigned argc = args.Length() + 1;
@@ -96,7 +95,7 @@ void Iterator::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   argv[argc-1] = args.Holder();
 
   v8::Local<v8::FunctionTemplate> cons = Nan::New<v8::FunctionTemplate>(iterator_constructor);
-  
+
   v8::MaybeLocal<v8::Object> instance;
   v8::Local<v8::Value> err;
   bool hasException = false;
@@ -110,7 +109,7 @@ void Iterator::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 
   if (hasException) {
-    isolate->ThrowException(err);  
+    isolate->ThrowException(err);
   } else {
     args.GetReturnValue().Set(instance.ToLocalChecked());
   }

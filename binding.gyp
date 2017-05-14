@@ -9,6 +9,7 @@
         "DeleteWorker.cc",
         "OptionsHelper.cc",
         "Iterator.cc",
+        "Batch.cc",
         "RocksDBNode.cc"
       ],
       'include_dirs' : [

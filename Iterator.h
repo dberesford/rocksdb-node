@@ -13,7 +13,6 @@ class Iterator : public Nan::ObjectWrap {
    explicit Iterator(rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *handle, rocksdb::DB* db);
    ~Iterator();
  
-   //static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
    static NAN_METHOD(New);
    static NAN_METHOD(SeekToFirst);
    static NAN_METHOD(SeekToLast);

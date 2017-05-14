@@ -7,6 +7,7 @@
 #include "DeleteWorker.h"
 #include "OptionsHelper.h"
 #include "Iterator.h"
+#include "Batch.h"
 #include "rocksdb/db.h"
 using namespace std;
 
@@ -40,6 +41,8 @@ void RocksDBNode::Init(v8::Local<v8::Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "getColumnFamilies", RocksDBNode::GetColumnFamilies);
   NODE_SET_PROTOTYPE_METHOD(tpl, "createColumnFamily", RocksDBNode::CreateColumnFamily);
   NODE_SET_PROTOTYPE_METHOD(tpl, "dropColumnFamily", RocksDBNode::DropColumnFamily);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "batch", RocksDBNode::Batch);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "write", RocksDBNode::Write);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
@@ -506,12 +509,12 @@ void RocksDBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& 
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
   }
-  rocksDBNode->_cfHandles->push_back(cf);  
+  rocksDBNode->_cfHandles->push_back(cf);
 }
 
 // Utility function for getting the ColumnFamilyHandle for a Column Family name
 rocksdb::ColumnFamilyHandle* RocksDBNode::GetColumnFamily(string family) {
-  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {    
+  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {
     if ((*it)->GetName() == family) return *it;
   }
   return NULL;
@@ -520,8 +523,8 @@ rocksdb::ColumnFamilyHandle* RocksDBNode::GetColumnFamily(string family) {
 rocksdb::Status RocksDBNode::DeleteColumnFamily(string family) {
   int index = -1;
   rocksdb::ColumnFamilyHandle *handle = NULL;
-  
-  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {    
+
+  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {
     if ((*it)->GetName() == family) {
       index = it - _cfHandles->begin();
       handle = *it;
@@ -541,13 +544,13 @@ rocksdb::Status RocksDBNode::DeleteColumnFamily(string family) {
 
 void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int nameIndex = 0;
-  
+
   if (args.Length() != 1) {
     Nan::ThrowTypeError("Wrong number of arguments");
-    return;    
+    return;
   }
 
-  string name = string(*Nan::Utf8String(args[nameIndex]));    
+  string name = string(*Nan::Utf8String(args[nameIndex]));
   RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
   rocksdb::Status s;
 
@@ -556,17 +559,17 @@ void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& ar
     Nan::ThrowError("Column Family not found");
     return;
   }
-  
+
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
-  }    
+  }
 }
 
 // TODO - move this out of here
 void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int pathIndex = -1;
-  
+
   // 2 args, assume (opts, path)
   if (args.Length() == 1) {
     pathIndex = 0;
@@ -575,7 +578,7 @@ void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& 
     pathIndex = 1;
   } else {
     Nan::ThrowTypeError("Wrong number of arguments");
-    return;    
+    return;
   }
 
   rocksdb::Options options;
@@ -585,7 +588,7 @@ void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& 
   }
 
   string path = string(*Nan::Utf8String(args[pathIndex]));
-      
+
   std::vector<std::string> familyNames;
   rocksdb::Status s = rocksdb::DB::ListColumnFamilies(options, path, &familyNames);
 
@@ -598,7 +601,40 @@ void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& 
   for (std::vector<string>::iterator it = familyNames.begin() ; it != familyNames.end(); ++it) {
     Nan::Set(arr, it - familyNames.begin(), Nan::New(*it).ToLocalChecked());
   }
-  
-  args.GetReturnValue().Set(arr);  
+
+  args.GetReturnValue().Set(arr);
 }
 
+void RocksDBNode::Batch(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Batch::NewInstance(args);
+}
+
+void RocksDBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int optsIndex = -1;
+  int batchIndex = -1;
+
+  if (args.Length() == 1) {
+    batchIndex = 0;
+  } else if (args.Length() == 2) {
+    optsIndex = 0;
+    batchIndex = 1;
+  } else {
+    Nan::ThrowTypeError("Wrong number of arguments");
+    return;
+  }
+
+  rocksdb::WriteOptions options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessWriteOptions(opts, &options);
+  }
+
+  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  class Batch* batch = ObjectWrap::Unwrap<class Batch>(args[batchIndex].As<v8::Object>());
+  rocksdb::Status s = rocksDBNode->_db->Write(options, &batch->_batch);
+
+  if (!s.ok()) {
+    Nan::ThrowError(s.getState());
+    return;
+  }
+}

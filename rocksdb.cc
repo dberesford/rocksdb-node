@@ -2,10 +2,12 @@
 #include <node.h>
 #include "RocksDBNode.h"
 #include "Iterator.h"
+#include "Batch.h"
 
 void InitAll(v8::Local<v8::Object> exports, v8::Local<v8::Object> module) {
   RocksDBNode::Init(exports);
   Iterator::Init();
+  Batch::Init();
   NODE_SET_METHOD(exports, "open", RocksDBNode::NewInstance);
   NODE_SET_METHOD(exports, "listColumnFamilies", RocksDBNode::ListColumnFamilies);
 }
