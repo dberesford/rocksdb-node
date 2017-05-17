@@ -2,7 +2,7 @@
 #define Batch_H
 
 #include <nan.h>
-#include "RocksDBNode.h"
+#include "DBNode.h"
 #include "rocksdb/db.h"
 
 using namespace std;
@@ -12,10 +12,10 @@ class Batch : public Nan::ObjectWrap {
   static void Init();
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
   rocksdb::WriteBatch _batch;
-  RocksDBNode *_rocksDBNode;
+  DBNode *_dbNode;
 
  private:
-  explicit Batch(RocksDBNode *rocksDBNode);
+  explicit Batch(DBNode *dbNode);
   ~Batch();
 
   static NAN_METHOD(New);

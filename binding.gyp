@@ -10,7 +10,7 @@
         "OptionsHelper.cc",
         "Iterator.cc",
         "Batch.cc",
-        "RocksDBNode.cc"
+        "DBNode.cc"
       ],
       'include_dirs' : [
         "<!(node -e \"require('nan')\")"

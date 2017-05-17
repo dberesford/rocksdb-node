@@ -2,14 +2,14 @@
 #include <nan.h>
 #include "rocksdb/db.h"
 #include "Batch.h"
-#include "RocksDBNode.h"
+#include "DBNode.h"
 #include <iostream>
 //using namespace std;
 
 Nan::Persistent<v8::FunctionTemplate> batch_constructor;
 
-Batch::Batch(RocksDBNode *rocksDBNode) {
-  _rocksDBNode = rocksDBNode;
+Batch::Batch(DBNode *dbNode) {
+  _dbNode = dbNode;
 }
 
 Batch::~Batch() {
@@ -26,7 +26,7 @@ void Batch::Init() {
 } 
 
 NAN_METHOD(Batch::New) {
-  // We expect Batch(rocksDBNode)
+  // We expect Batch(dbNode)
   int rocksIndex = -1;
   if (info.Length() == 1) {
     rocksIndex = 0;
@@ -35,7 +35,7 @@ NAN_METHOD(Batch::New) {
     return;
   }
 
-  RocksDBNode* rocks = Nan::ObjectWrap::Unwrap<RocksDBNode>(info[rocksIndex].As<v8::Object>());
+  DBNode* rocks = Nan::ObjectWrap::Unwrap<DBNode>(info[rocksIndex].As<v8::Object>());
   Batch* obj = new Batch(rocks);
   obj->Wrap(info.This());
   info.GetReturnValue().Set(info.This());
@@ -43,7 +43,7 @@ NAN_METHOD(Batch::New) {
 
 void Batch::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
-  // Note: we pass an additional argument here which is the RocksDBNode object
+  // Note: we pass an additional argument here which is the DBNode object
   // that is creating the new Batch. Batches can't be created anywhere else.
   const unsigned argc = args.Length() + 1;
   v8::Local<v8::Value> *argv = new v8::Local<v8::Value>[argc];
@@ -101,9 +101,9 @@ NAN_METHOD(Batch::Put) {
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(info[familyIndex]));
-    columnFamily = rocksDBBatch->_rocksDBNode->GetColumnFamily(family);
+    columnFamily = rocksDBBatch->_dbNode->GetColumnFamily(family);
   } else {
-    columnFamily = rocksDBBatch->_rocksDBNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+    columnFamily = rocksDBBatch->_dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
   }
 
   if (columnFamily == NULL) {
@@ -143,9 +143,9 @@ NAN_METHOD(Batch::Delete) {
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(info[familyIndex]));
-    columnFamily = rocksDBBatch->_rocksDBNode->GetColumnFamily(family);
+    columnFamily = rocksDBBatch->_dbNode->GetColumnFamily(family);
   } else {
-    columnFamily = rocksDBBatch->_rocksDBNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+    columnFamily = rocksDBBatch->_dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
   }
 
   if (columnFamily == NULL) {

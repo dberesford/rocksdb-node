@@ -3,7 +3,7 @@
 #include "rocksdb/db.h"
 #include "Iterator.h"
 #include "OptionsHelper.h"
-#include "RocksDBNode.h"
+#include "DBNode.h"
 #include <iostream>
 
 Nan::Persistent<v8::FunctionTemplate> iterator_constructor;
@@ -37,7 +37,7 @@ void Iterator::Init() {
 }
 
 NAN_METHOD(Iterator::New) {
-  // We expect newIterator(<options>, <columnFamilyName>, rocksDBNode), where both options and columnFamilyName are both optional
+  // We expect newIterator(<options>, <columnFamilyName>, dbNode), where both options and columnFamilyName are both optional
   int optsIndex = -1;
   int columnFamilyIndex = -1;
   int rocksIndex = -1;
@@ -45,12 +45,12 @@ NAN_METHOD(Iterator::New) {
   if (info.Length() == 1) {
     rocksIndex = 0;
   } else if (info.Length() == 2) {
-    // newIterator(options, rocksDBNode)
+    // newIterator(options, dbNode)
     if (info[0]->IsObject()) {
       optsIndex = 0;
       rocksIndex = 1;
     } else {
-      // newIterator(columnFamilyName, rocksDBNode)
+      // newIterator(columnFamilyName, dbNode)
       columnFamilyIndex = 0;
       rocksIndex = 1;
     }
@@ -69,15 +69,15 @@ NAN_METHOD(Iterator::New) {
     OptionsHelper::ProcessReadOptions(opts, &options);
   }
 
-  RocksDBNode* rocks = Nan::ObjectWrap::Unwrap<RocksDBNode>(info[rocksIndex].As<v8::Object>());
+  DBNode* dbNode = Nan::ObjectWrap::Unwrap<DBNode>(info[rocksIndex].As<v8::Object>());
 
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (columnFamilyIndex != -1) {
     string family = string(*Nan::Utf8String(info[columnFamilyIndex]));
-    columnFamily = rocks->GetColumnFamily(family);
+    columnFamily = dbNode->GetColumnFamily(family);
   }
 
-  Iterator* obj = new Iterator(options, columnFamily, rocks->db());
+  Iterator* obj = new Iterator(options, columnFamily, dbNode->db());
   obj->Wrap(info.This());
   info.GetReturnValue().Set(info.This());
 }
@@ -85,7 +85,7 @@ NAN_METHOD(Iterator::New) {
 void Iterator::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
-  // Note: we pass an additional argument here which is the RocksDBNode object
+  // Note: we pass an additional argument here which is the DBNode object
   // that is creating the new Iterator. Iterators can't be created anywhere else.
   const unsigned argc = args.Length() + 1;
   v8::Local<v8::Value> *argv = new v8::Local<v8::Value>[argc];

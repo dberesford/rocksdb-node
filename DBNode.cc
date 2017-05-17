@@ -1,7 +1,7 @@
 #include <node.h>
 #include <nan.h>
 #include <iostream>
-#include "RocksDBNode.h"  
+#include "DBNode.h"  
 #include "PutWorker.h"
 #include "GetWorker.h"
 #include "DeleteWorker.h"
@@ -11,16 +11,16 @@
 #include "rocksdb/db.h"
 using namespace std;
 
-v8::Persistent<v8::Function> RocksDBNode::constructor;
+v8::Persistent<v8::Function> DBNode::constructor;
 
-RocksDBNode::RocksDBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles) {
+DBNode::DBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles) {
   _options = options;
   _path = path;
   _db = db;
   _cfHandles = cfHandles;
 }
 
-RocksDBNode::~RocksDBNode() {
+DBNode::~DBNode() {
   for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {
     _db->DestroyColumnFamilyHandle(*it);
   }
@@ -28,27 +28,27 @@ RocksDBNode::~RocksDBNode() {
   delete _db;
 }
 
-void RocksDBNode::Init(v8::Local<v8::Object> exports) {
+void DBNode::Init(v8::Local<v8::Object> exports) {
   v8::Isolate* isolate = exports->GetIsolate();
   v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, New);
-  tpl->SetClassName(v8::String::NewFromUtf8(isolate, "RocksDBNode"));
+  tpl->SetClassName(v8::String::NewFromUtf8(isolate, "DBNode"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-  NODE_SET_PROTOTYPE_METHOD(tpl, "put", RocksDBNode::Put);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "get", RocksDBNode::Get);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "del", RocksDBNode::Delete);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "newIterator", RocksDBNode::NewIterator);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "getColumnFamilies", RocksDBNode::GetColumnFamilies);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "createColumnFamily", RocksDBNode::CreateColumnFamily);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "dropColumnFamily", RocksDBNode::DropColumnFamily);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "batch", RocksDBNode::Batch);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "write", RocksDBNode::Write);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "put", DBNode::Put);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "get", DBNode::Get);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "del", DBNode::Delete);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "newIterator", DBNode::NewIterator);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "getColumnFamilies", DBNode::GetColumnFamilies);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "createColumnFamily", DBNode::CreateColumnFamily);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "dropColumnFamily", DBNode::DropColumnFamily);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "batch", DBNode::Batch);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "write", DBNode::Write);
 
   constructor.Reset(isolate, tpl->GetFunction());
-  exports->Set(v8::String::NewFromUtf8(isolate, "RocksDBNode"), tpl->GetFunction());
+  exports->Set(v8::String::NewFromUtf8(isolate, "DBNode"), tpl->GetFunction());
 } 
 
-void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Nan::HandleScope scope;
   v8::Isolate* isolate = args.GetIsolate();
   if (args.IsConstructCall()) {
@@ -92,8 +92,8 @@ void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
       return;
     }
   
-    RocksDBNode* rocksDBNode = new RocksDBNode(options, path, db, handles);
-    rocksDBNode->Wrap(args.This());
+    DBNode* dbNode = new DBNode(options, path, db, handles);
+    dbNode->Wrap(args.This());
     args.GetReturnValue().Set(args.This());
   } else {
     const unsigned argc = args.Length();
@@ -112,7 +112,7 @@ void RocksDBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 }
 
-void RocksDBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   const unsigned argc = args.Length();
@@ -146,7 +146,7 @@ void RocksDBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
   argv = NULL;
 }
 
-void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int familyIndex = -1;
   int keyIndex = -1;
@@ -211,14 +211,14 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Local<v8::Object> keyObj = args[keyIndex].As<v8::Object>();
   v8::Local<v8::Object> valueObj = args[valueIndex].As<v8::Object>();
   
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
 
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
-    columnFamily = rocksDBNode->GetColumnFamily(family);
+    columnFamily = dbNode->GetColumnFamily(family);
   } else {
-    columnFamily = rocksDBNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
   }
 
   if (columnFamily == NULL) {
@@ -234,7 +234,7 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   rocksdb::Status s;
 
   if (callback) {  
-    PutWorker *pw = new PutWorker(callback, rocksDBNode->_db, options, columnFamily, keyObj, valueObj);
+    PutWorker *pw = new PutWorker(callback, dbNode->_db, options, columnFamily, keyObj, valueObj);
     Nan::AsyncQueueWorker(pw);
   } else {
     rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(keyObj), node::Buffer::Length(keyObj))
@@ -242,14 +242,14 @@ void RocksDBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
     rocksdb::Slice value = node::Buffer::HasInstance(args[valueIndex]) ? rocksdb::Slice(node::Buffer::Data(valueObj), node::Buffer::Length(valueObj))
                                                             : rocksdb::Slice(string(*Nan::Utf8String(args[valueIndex])));
-    s = rocksDBNode->_db->Put(options, columnFamily, key, value);
+    s = dbNode->_db->Put(options, columnFamily, key, value);
     if (!s.ok()) {
       Nan::ThrowError(s.getState());
     }
   }
 }
 
-void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   int optsIndex = -1;
@@ -320,14 +320,14 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 
   v8::Local<v8::Object> keyObj = args[keyIndex].As<v8::Object>();
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
 
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
-    columnFamily = rocksDBNode->GetColumnFamily(family);
+    columnFamily = dbNode->GetColumnFamily(family);
   } else {
-    columnFamily = rocksDBNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
   }
 
   if (columnFamily == NULL) {
@@ -341,12 +341,12 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
   
   if (callback) {
-    Nan::AsyncQueueWorker(new GetWorker(callback, rocksDBNode->_db, buffer, options, columnFamily, keyObj));
+    Nan::AsyncQueueWorker(new GetWorker(callback, dbNode->_db, buffer, options, columnFamily, keyObj));
   } else {
     rocksdb::Slice key = node::Buffer::HasInstance(keyObj) ? rocksdb::Slice(node::Buffer::Data(keyObj), node::Buffer::Length(keyObj))
                                                            : rocksdb::Slice(string(*Nan::Utf8String(keyObj)));
     string value;
-    rocksdb::Status s = rocksDBNode->_db->Get(options, columnFamily, key, &value);
+    rocksdb::Status s = dbNode->_db->Get(options, columnFamily, key, &value);
   
     if (s.IsNotFound()) {
       args.GetReturnValue().Set(Nan::Null());
@@ -366,7 +366,7 @@ void RocksDBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 }
 
-void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int familyIndex = -1;
   int keyIndex = -1;
@@ -427,14 +427,14 @@ void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
   rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
                                                             : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
   
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
   
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
-    columnFamily = rocksDBNode->GetColumnFamily(family);
+    columnFamily = dbNode->GetColumnFamily(family);
   } else {
-    columnFamily = rocksDBNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
   }
 
   if (columnFamily == NULL) {
@@ -450,34 +450,34 @@ void RocksDBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
   rocksdb::Status s;
 
   if (callback) {
-    Nan::AsyncQueueWorker(new DeleteWorker(callback, rocksDBNode->_db, columnFamily, key, options));
+    Nan::AsyncQueueWorker(new DeleteWorker(callback, dbNode->_db, columnFamily, key, options));
   } else {
-    s = rocksDBNode->_db->Delete(options, columnFamily, key);
+    s = dbNode->_db->Delete(options, columnFamily, key);
     if (!s.ok()) {
       Nan::ThrowError(s.getState());
     }
   }
 }
 
-void RocksDBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Iterator::NewInstance(args);
 }
 
-void RocksDBNode::GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   std::vector<std::string> families;
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
   rocksdb::Status s;
 
   v8::Local<v8::Array> arr = Nan::New<v8::Array>();
-  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = rocksDBNode->_cfHandles->begin() ; it != rocksDBNode->_cfHandles->end(); ++it) {
-    Nan::Set(arr, it - rocksDBNode->_cfHandles->begin(), Nan::New((*it)->GetName()).ToLocalChecked());
+  for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = dbNode->_cfHandles->begin() ; it != dbNode->_cfHandles->end(); ++it) {
+    Nan::Set(arr, it - dbNode->_cfHandles->begin(), Nan::New((*it)->GetName()).ToLocalChecked());
   }
   
   args.GetReturnValue().Set(arr);
 }
 
 
-void RocksDBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int nameIndex = -1;
   
@@ -501,26 +501,26 @@ void RocksDBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& 
   //}
 
   string name = string(*Nan::Utf8String(args[nameIndex]));    
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
   rocksdb::Status s;
 
   rocksdb::ColumnFamilyHandle* cf;
-  s = rocksDBNode->_db->CreateColumnFamily(options, name, &cf);
+  s = dbNode->_db->CreateColumnFamily(options, name, &cf);
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
   }
-  rocksDBNode->_cfHandles->push_back(cf);
+  dbNode->_cfHandles->push_back(cf);
 }
 
 // Utility function for getting the ColumnFamilyHandle for a Column Family name
-rocksdb::ColumnFamilyHandle* RocksDBNode::GetColumnFamily(string family) {
+rocksdb::ColumnFamilyHandle* DBNode::GetColumnFamily(string family) {
   for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = _cfHandles->begin() ; it != _cfHandles->end(); ++it) {
     if ((*it)->GetName() == family) return *it;
   }
   return NULL;
 }
 
-rocksdb::Status RocksDBNode::DeleteColumnFamily(string family) {
+rocksdb::Status DBNode::DeleteColumnFamily(string family) {
   int index = -1;
   rocksdb::ColumnFamilyHandle *handle = NULL;
 
@@ -542,7 +542,7 @@ rocksdb::Status RocksDBNode::DeleteColumnFamily(string family) {
   }
 }
 
-void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int nameIndex = 0;
 
   if (args.Length() != 1) {
@@ -551,10 +551,10 @@ void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& ar
   }
 
   string name = string(*Nan::Utf8String(args[nameIndex]));
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
   rocksdb::Status s;
 
-  s = rocksDBNode->DeleteColumnFamily(name);
+  s = dbNode->DeleteColumnFamily(name);
   if (s.IsNotFound()) {
     Nan::ThrowError("Column Family not found");
     return;
@@ -566,7 +566,7 @@ void RocksDBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& ar
 }
 
 // TODO - move this out of here
-void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int pathIndex = -1;
 
@@ -605,11 +605,11 @@ void RocksDBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& 
   args.GetReturnValue().Set(arr);
 }
 
-void RocksDBNode::Batch(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::Batch(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Batch::NewInstance(args);
 }
 
-void RocksDBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void DBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int optsIndex = -1;
   int batchIndex = -1;
 
@@ -629,9 +629,9 @@ void RocksDBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
     OptionsHelper::ProcessWriteOptions(opts, &options);
   }
 
-  RocksDBNode* rocksDBNode = ObjectWrap::Unwrap<RocksDBNode>(args.Holder());
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
   class Batch* batch = ObjectWrap::Unwrap<class Batch>(args[batchIndex].As<v8::Object>());
-  rocksdb::Status s = rocksDBNode->_db->Write(options, &batch->_batch);
+  rocksdb::Status s = dbNode->_db->Write(options, &batch->_batch);
 
   if (!s.ok()) {
     Nan::ThrowError(s.getState());

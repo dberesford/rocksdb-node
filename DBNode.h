@@ -1,5 +1,5 @@
-#ifndef RocksDBNode_H
-#define RocksDBNode_H
+#ifndef DBNode_H
+#define DBNode_H
 
 #include <nan.h>
 #include "rocksdb/db.h"
@@ -7,7 +7,7 @@
 
 using namespace std;
 
-class RocksDBNode : public Nan::ObjectWrap {
+class DBNode : public Nan::ObjectWrap {
  public:
   static void Init(v8::Local<v8::Object> exports);
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -16,8 +16,8 @@ class RocksDBNode : public Nan::ObjectWrap {
   rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
 
  private:
-  explicit RocksDBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles);
-  ~RocksDBNode();
+  explicit DBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles);
+  ~DBNode();
 
   rocksdb::Status DeleteColumnFamily(string family);
 
@@ -41,4 +41,4 @@ class RocksDBNode : public Nan::ObjectWrap {
 
 };
 
-#endif  // RocksDBNode_H
+#endif  // DBNode_H

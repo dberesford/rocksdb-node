@@ -1,15 +1,15 @@
 #include <nan.h>
 #include <node.h>
-#include "RocksDBNode.h"
+#include "DBNode.h"
 #include "Iterator.h"
 #include "Batch.h"
 
 void InitAll(v8::Local<v8::Object> exports, v8::Local<v8::Object> module) {
-  RocksDBNode::Init(exports);
+  DBNode::Init(exports);
   Iterator::Init();
   Batch::Init();
-  NODE_SET_METHOD(exports, "open", RocksDBNode::NewInstance);
-  NODE_SET_METHOD(exports, "listColumnFamilies", RocksDBNode::ListColumnFamilies);
+  NODE_SET_METHOD(exports, "open", DBNode::NewInstance);
+  NODE_SET_METHOD(exports, "listColumnFamilies", DBNode::ListColumnFamilies);
 }
 
 NODE_MODULE(addon, InitAll)
