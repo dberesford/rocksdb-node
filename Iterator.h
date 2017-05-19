@@ -9,6 +9,7 @@ class Iterator : public Nan::ObjectWrap {
   public:
     static void Init();
     static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
+    rocksdb::Iterator* _it;
  private: 
    explicit Iterator(rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *handle, rocksdb::DB* db);
    ~Iterator();
@@ -23,8 +24,6 @@ class Iterator : public Nan::ObjectWrap {
    static NAN_METHOD(Key);
    static NAN_METHOD(Value);
    static NAN_METHOD(Status);
-
-   rocksdb::Iterator* _it;
 };
 
 #endif  // Iterator_H

@@ -271,6 +271,10 @@ db.put('myFamily', 'foo', 'bar')
 db.del('myFamily', 'foo')
 ```
 
+#### Close 
+
+`db.cose()` Closes an open database. Any subsequent usage of the `db` will result in a 'Database is not open' Error thrown.
+
 #### Iteration
 
 The Iterator API matches the Rocks [Iterator API](https://github.com/facebook/rocksdb/wiki/Basic-Operations#iteration). Note the Iterator API is synchronous.
@@ -286,7 +290,7 @@ if (err) throw err;
 
 The following Rocks [Iterator API](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/iterator.h#L29) is supported (documentation has been copied from there):
 
-##### iterator.newIterator()
+##### db.newIterator()
 
 `db.newIterator(<read-options>, <column-family>)` where <read-options> and  <column-family>optional.
 
@@ -375,6 +379,19 @@ const err = it.status()
 if (err) throw err;
 ```
 
+##### db.releaseIterator()
+
+`db.releaseIterator(iterator)`, releases the iterator, this should be called when you are finished iterating.
+
+
+
+```javascript
+const iter = db.newIterator(readOpts)
+...
+...
+db.releaseIterator(iter)
+```
+
 #### Column Families
 
 The Column Family API mostly matches the Rocks [Column Families](https://github.com/facebook/rocksdb/wiki/Column-Families), with some additional utility methods. 
@@ -452,4 +469,30 @@ Note also that `WriteOptions` can be passed to `write`, e.g.
   const batch = db.batch()
   batch.put('k2', 'v2')
   db.write(opts, batch)
+```
+
+#### Snapshots
+
+Support for [Snapshots](https://github.com/facebook/rocksdb/wiki/Basic-Operations#snapshots). Usage:
+
+```javascript
+  const db = rocksdb.open({create_if_missing: true}, path)
+  db.put('foo', 'bar')
+
+  const readOptions = {}
+  readOptions.snapshot = db.getSnapshot()
+
+  // these will not be part of the iterator
+  db.put('foo2', 'bar2')
+
+  const it = db.newIterator(readOptions)
+
+
+  for (it.seekToFirst(); it.valid(); it.next())
+  ....
+  ....
+
+  db.releaseIterator(it)
+  db.releaseSnapshot(readOptions.snapshot)
+
 ```

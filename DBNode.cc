@@ -7,11 +7,14 @@
 #include "DeleteWorker.h"
 #include "OptionsHelper.h"
 #include "Iterator.h"
+#include "Snapshot.h"
 #include "Batch.h"
 #include "rocksdb/db.h"
 using namespace std;
 
 v8::Persistent<v8::Function> DBNode::constructor;
+const char* ERR_DB_NOT_OPEN = "Database is not open";
+const char* ERR_WRONG_ARGS = "Wrong number of arguments";
 
 DBNode::DBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles) {
   _options = options;
@@ -38,11 +41,15 @@ void DBNode::Init(v8::Local<v8::Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "get", DBNode::Get);
   NODE_SET_PROTOTYPE_METHOD(tpl, "del", DBNode::Delete);
   NODE_SET_PROTOTYPE_METHOD(tpl, "newIterator", DBNode::NewIterator);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "getSnapshot", DBNode::GetSnapshot);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "releaseIterator", DBNode::ReleaseIterator);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "releaseSnapshot", DBNode::ReleaseSnapshot);
   NODE_SET_PROTOTYPE_METHOD(tpl, "getColumnFamilies", DBNode::GetColumnFamilies);
   NODE_SET_PROTOTYPE_METHOD(tpl, "createColumnFamily", DBNode::CreateColumnFamily);
   NODE_SET_PROTOTYPE_METHOD(tpl, "dropColumnFamily", DBNode::DropColumnFamily);
   NODE_SET_PROTOTYPE_METHOD(tpl, "batch", DBNode::Batch);
   NODE_SET_PROTOTYPE_METHOD(tpl, "write", DBNode::Write);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "close", DBNode::Close);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "DBNode"), tpl->GetFunction());
@@ -53,7 +60,7 @@ void DBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
   if (args.IsConstructCall()) {
     if (args.Length() < 2) {
-      Nan::ThrowTypeError("Wrong number of arguments");
+      Nan::ThrowTypeError(ERR_WRONG_ARGS);
       return;
     }
   
@@ -91,7 +98,7 @@ void DBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
       Nan::ThrowError(s.getState());
       return;
     }
-  
+
     DBNode* dbNode = new DBNode(options, path, db, handles);
     dbNode->Wrap(args.This());
     args.GetReturnValue().Set(args.This());
@@ -105,7 +112,7 @@ void DBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
     v8::Local<v8::Function> cons = v8::Local<v8::Function>::New(isolate, constructor);
     v8::Local<v8::Context> context = isolate->GetCurrentContext();
     v8::Local<v8::Object> instance = cons->NewInstance(context, argc, argv).ToLocalChecked();
-    
+
     delete [] argv;
     argv = NULL;
     args.GetReturnValue().Set(instance);
@@ -123,7 +130,7 @@ void DBNode::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   v8::Local<v8::Function> cons = v8::Local<v8::Function>::New(isolate, constructor);
   v8::Local<v8::Context> context = isolate->GetCurrentContext();
- 
+
   // TODO - seek advice here, exception propagation from the constructor here is non-trivial, there may be a better way of doing this
   v8::MaybeLocal<v8::Object> instance;
   v8::Local<v8::Value> err;
@@ -192,7 +199,7 @@ void DBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
     valueIndex = 3;
     callbackIndex = 4;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;    
   }
 
@@ -213,6 +220,11 @@ void DBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
 
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
@@ -232,6 +244,7 @@ void DBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 
   rocksdb::Status s;
+
 
   if (callback) {  
     PutWorker *pw = new PutWorker(callback, dbNode->_db, options, columnFamily, keyObj, valueObj);
@@ -293,7 +306,7 @@ void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     keyIndex = 2;
     callbackIndex = 3;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;    
   }
   
@@ -322,6 +335,11 @@ void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Local<v8::Object> keyObj = args[keyIndex].As<v8::Object>();
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
 
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
@@ -339,7 +357,7 @@ void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
     }
     return;
   }
-  
+
   if (callback) {
     Nan::AsyncQueueWorker(new GetWorker(callback, dbNode->_db, buffer, options, columnFamily, keyObj));
   } else {
@@ -347,7 +365,7 @@ void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
                                                            : rocksdb::Slice(string(*Nan::Utf8String(keyObj)));
     string value;
     rocksdb::Status s = dbNode->_db->Get(options, columnFamily, key, &value);
-  
+
     if (s.IsNotFound()) {
       args.GetReturnValue().Set(Nan::Null());
       return;
@@ -408,7 +426,7 @@ void DBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
     keyIndex = 2;
     callbackIndex = 3;
   }else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;    
   }
 
@@ -426,9 +444,14 @@ void DBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
   // TODO - check for key undefined or null
   rocksdb::Slice key = node::Buffer::HasInstance(args[keyIndex]) ? rocksdb::Slice(node::Buffer::Data(args[keyIndex]->ToObject()), node::Buffer::Length(args[keyIndex]->ToObject()))
                                                             : rocksdb::Slice(string(*Nan::Utf8String(args[keyIndex])));
-  
+
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
-  
+
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(args[familyIndex]));
@@ -446,7 +469,7 @@ void DBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
     }
     return;
   }
-  
+
   rocksdb::Status s;
 
   if (callback) {
@@ -463,16 +486,65 @@ void DBNode::NewIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
   Iterator::NewInstance(args);
 }
 
+void DBNode::ReleaseIterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int iteratorIndex = -1;
+
+  if (args.Length() == 1) {
+    iteratorIndex = 0;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+  Iterator* iter = Nan::ObjectWrap::Unwrap<Iterator>(args[iteratorIndex].As<v8::Object>());
+
+  if (iter->_it) {
+    delete iter->_it;
+  }
+}
+
+void DBNode::GetSnapshot(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  Snapshot::NewInstance(args);
+}
+
+void DBNode::ReleaseSnapshot(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int optsIndex = -1;
+
+  if (args.Length() == 1) {
+    optsIndex = 0;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+  v8::Local<v8::String> snapshot = Nan::New("snapshot").ToLocalChecked();
+  if (opts->Has(snapshot)) {
+    Snapshot* ss = Nan::ObjectWrap::Unwrap<Snapshot>(opts->Get(snapshot).As<v8::Object>());
+    dbNode->_db->ReleaseSnapshot(ss->_snapshot);
+  }
+}
+
 void DBNode::GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args) {
   std::vector<std::string> families;
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::Status s;
 
   v8::Local<v8::Array> arr = Nan::New<v8::Array>();
   for (std::vector<rocksdb::ColumnFamilyHandle*>::iterator it = dbNode->_cfHandles->begin() ; it != dbNode->_cfHandles->end(); ++it) {
     Nan::Set(arr, it - dbNode->_cfHandles->begin(), Nan::New((*it)->GetName()).ToLocalChecked());
   }
-  
+
   args.GetReturnValue().Set(arr);
 }
 
@@ -489,7 +561,7 @@ void DBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args)
     optsIndex = 0;
     nameIndex = 1;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;    
   }
 
@@ -502,6 +574,11 @@ void DBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args)
 
   string name = string(*Nan::Utf8String(args[nameIndex]));    
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::Status s;
 
   rocksdb::ColumnFamilyHandle* cf;
@@ -546,12 +623,17 @@ void DBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int nameIndex = 0;
 
   if (args.Length() != 1) {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
   string name = string(*Nan::Utf8String(args[nameIndex]));
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   rocksdb::Status s;
 
   s = dbNode->DeleteColumnFamily(name);
@@ -577,7 +659,7 @@ void DBNode::ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& args)
     optsIndex = 0;
     pathIndex = 1;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -619,7 +701,7 @@ void DBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
     optsIndex = 0;
     batchIndex = 1;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -630,11 +712,29 @@ void DBNode::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
   }
 
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
   class Batch* batch = ObjectWrap::Unwrap<class Batch>(args[batchIndex].As<v8::Object>());
   rocksdb::Status s = dbNode->_db->Write(options, &batch->_batch);
 
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
     return;
+  }
+}
+
+void DBNode::Close(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  if (dbNode->_db) {
+    delete dbNode->_db;
+    dbNode->_db = NULL;
   }
 }

@@ -48,3 +48,24 @@ test('wrong args get', function (t) {
   }, /Wrong number of arguments/)
   t.end()
 })
+
+test('close database', function (t) {
+  db.close()
+  t.throws(function () {
+    db.put('foo', 'bar')
+  }, /Database is not open/)
+
+  t.throws(function () {
+    db.get('foo')
+  }, /Database is not open/)
+
+  t.throws(function () {
+    db.del('foo')
+  }, /Database is not open/)
+
+  t.throws(function () {
+    db.close()
+  }, /Database is not open/)
+
+  t.end()
+})

@@ -28,11 +28,15 @@ class DBNode : public Nan::ObjectWrap {
   static void Get(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Delete(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void NewIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void ReleaseIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void GetSnapshot(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void ReleaseSnapshot(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Batch(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Write(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void Close(const v8::FunctionCallbackInfo<v8::Value>& info);
 
   rocksdb::DB *_db;
   rocksdb::Options _options;

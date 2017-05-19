@@ -1,5 +1,6 @@
 #include <nan.h>
-#include "OptionsHelper.h"  
+#include "OptionsHelper.h"
+#include "Snapshot.h"
 #include "rocksdb/db.h"
 
 // Mirror the rocksdb options here - https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h
@@ -73,4 +74,10 @@ void OptionsHelper::ProcessReadOptions (v8::Local<v8::Object> opts, rocksdb::Rea
   BOOLEAN_OPTION(background_purge_on_iterator_cleanup, opts, options)
   INT_OPTION(readahead_size, opts, options)
   BOOLEAN_OPTION(ignore_range_deletions, opts, options)
+
+  v8::Local<v8::String> snapshot = Nan::New("snapshot").ToLocalChecked();
+  if (opts->Has(snapshot)) {
+    Snapshot* ss = Nan::ObjectWrap::Unwrap<Snapshot>(opts->Get(snapshot).As<v8::Object>());
+    options->snapshot = ss->_snapshot;
+  }
 }

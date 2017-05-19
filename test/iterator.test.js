@@ -31,7 +31,7 @@ test('iterator with strings', function (t) {
     t.equal(it.key(), 'foo')
     t.equal(it.value(), 'bar')
   }
-
+  db.releaseIterator(it)
   t.end()
 })
 
@@ -57,7 +57,7 @@ test('iterator with buffers', function (t) {
     t.equal(key.length, k.length)
     t.equal(val.length, v.length)
   }
-
+  db.releaseIterator(it)
   t.end()
 })
 
@@ -85,7 +85,7 @@ test('iterator seek', function (t) {
     count++
   }
   t.equal(count, 1)
-
+  db.releaseIterator(it)
   t.end()
 })
 
@@ -110,6 +110,6 @@ test('iterator seek buffers', function (t) {
     count++
   }
   t.equal(count, 2)
-
+  db.releaseIterator(it)
   t.end()
 })

@@ -9,6 +9,7 @@
         "DeleteWorker.cc",
         "OptionsHelper.cc",
         "Iterator.cc",
+        "Snapshot.cc",
         "Batch.cc",
         "DBNode.cc"
       ],
