@@ -58,7 +58,8 @@ db.put('node', 'rocks', function(err) {
 ```javascript 
 {
   open,
-  listColulmFamilies
+  listColumnFamilies
+  destroyDB
 }
 ```
 
@@ -274,6 +275,21 @@ db.del('myFamily', 'foo')
 #### Close 
 
 `db.cose()` Closes an open database. Any subsequent usage of the `db` will result in a 'Database is not open' Error thrown.
+
+#### Destroy Database
+
+`rocksdb.destroyDB(path, <options>)` where <options> is optional argument. This destroys a database, fully removing it from the file system. Database must already be closed before it can be destroyed.
+
+```javascript
+  const path = os.tmpdir() + '/rocksdbDestroyTest'
+  const db = rocksdb.open({create_if_missing: true}, path)
+  ...
+  ...
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
+```
 
 #### Iteration
 

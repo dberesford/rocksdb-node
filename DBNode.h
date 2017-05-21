@@ -13,6 +13,7 @@ class DBNode : public Nan::ObjectWrap {
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
   inline rocksdb::DB* db() { return _db;}
   static void ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void DestroyDB(const v8::FunctionCallbackInfo<v8::Value>& info);
   rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
 
  private:

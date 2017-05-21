@@ -3,9 +3,9 @@ const fs = require('fs')
 const rimraf = require('rimraf')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
+const path = os.tmpdir() + '/rocksdbIteratorStringTest'
 
 test('iterator with strings', function (t) {
-  const path = os.tmpdir() + '/rocksdbIteratorStringTest'
   rimraf.sync(path)
   const db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
@@ -32,6 +32,11 @@ test('iterator with strings', function (t) {
     t.equal(it.value(), 'bar')
   }
   db.releaseIterator(it)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })
 
@@ -58,6 +63,11 @@ test('iterator with buffers', function (t) {
     t.equal(val.length, v.length)
   }
   db.releaseIterator(it)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })
 
@@ -86,6 +96,11 @@ test('iterator seek', function (t) {
   }
   t.equal(count, 1)
   db.releaseIterator(it)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })
 
@@ -111,5 +126,10 @@ test('iterator seek buffers', function (t) {
   }
   t.equal(count, 2)
   db.releaseIterator(it)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })

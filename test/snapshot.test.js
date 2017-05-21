@@ -1,4 +1,5 @@
 const os = require('os')
+const fs = require('fs')
 const rimraf = require('rimraf')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
@@ -26,5 +27,9 @@ test('setup', function (t) {
   db.releaseIterator(it)
   db.releaseSnapshot(readOptions.snapshot)
   db.close()
+
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })

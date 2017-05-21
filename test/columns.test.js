@@ -1,4 +1,5 @@
 const os = require('os')
+const fs = require('fs')
 const rimraf = require('rimraf')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
@@ -115,5 +116,12 @@ test('column iterator', function (t) {
 test('invalid column iterator', function (t) {
   const it = db.newIterator('idontexist')
   t.ok(!it.valid())
+  t.end()
+})
+
+test('teardown', function (t) {
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
   t.end()
 })

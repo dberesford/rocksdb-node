@@ -1,10 +1,12 @@
 const os = require('os')
+const fs = require('fs')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
+const path = os.tmpdir() + '/rocksdbBasicTest'
 let db
 
 test('setup', function (t) {
-  db = rocksdb.open({create_if_missing: true}, os.tmpdir() + '/rocksdbBasicTest')
+  db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
   t.end()
 })
@@ -67,5 +69,12 @@ test('close database', function (t) {
     db.close()
   }, /Database is not open/)
 
+  t.end()
+})
+
+test('destroy database', function (t) {
+  t.ok(fs.existsSync(path))
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
   t.end()
 })

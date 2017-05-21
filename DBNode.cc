@@ -775,3 +775,34 @@ void DBNode::IngestExternalFile(const v8::FunctionCallbackInfo<v8::Value>& args)
     return;
   }
 }
+
+// TODO - move this out of here
+void DBNode::DestroyDB(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int pathIndex = -1;
+  int optsIndex = -1;
+
+  if (args.Length() == 1) {
+    pathIndex = 0;
+  } else if (args.Length() == 2) {
+    // expect (path, opts) as per rocks api
+    pathIndex = 0;
+    optsIndex = 1;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+
+  rocksdb::Options options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = args[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessOpenOptions(opts, &options);
+  }
+
+  string path = string(*Nan::Utf8String(args[pathIndex]));
+  rocksdb::Status s = rocksdb::DestroyDB(path, options);
+
+  if (!s.ok()) {
+    Nan::ThrowError(s.getState());
+    return;
+  }
+}

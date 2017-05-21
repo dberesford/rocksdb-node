@@ -1,4 +1,5 @@
 const os = require('os')
+const fs = require('fs')
 const test = require('tap').test
 const rimraf = require('rimraf')
 const rocksdb = require('../build/Release/rocksdb.node')
@@ -18,5 +19,10 @@ test('SstFileWriter test', function (t) {
 
   db.ingestExternalFile(file)
   t.equal(db.get('a'), 'b')
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })

@@ -1,4 +1,5 @@
 const os = require('os')
+const fs = require('fs')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
@@ -52,7 +53,8 @@ test('options test', function (t) {
     write_thread_slow_yield_usec: 3
   }
 
-  const db = rocksdb.open(opts, os.tmpdir() + '/rocksdbOptsTest')
+  const path = os.tmpdir() + '/rocksdbOptsTest'
+  const db = rocksdb.open(opts, path)
   t.ok(db)
 
   const writeOpts = {
@@ -76,5 +78,10 @@ test('options test', function (t) {
     ignore_range_deletions: false
   }
   t.equals(db.get(readOpts, 'foo'), 'bar')
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+
   t.end()
 })

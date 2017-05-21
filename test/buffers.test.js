@@ -2,10 +2,11 @@ var fs = require('fs')
 const os = require('os')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
+const path = os.tmpdir() + '/rocksdbBuffersTest'
 let db
 
 test('setup', function (t) {
-  db = rocksdb.open({create_if_missing: true}, os.tmpdir() + '/rocksdbBuffersTest')
+  db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
   t.end()
 })
@@ -42,4 +43,11 @@ test('image buffers async', function (t) {
       })
     })
   })
+})
+
+test('teardown', function (t) {
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+  t.end()
 })

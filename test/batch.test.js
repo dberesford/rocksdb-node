@@ -1,13 +1,13 @@
 const os = require('os')
+const fs = require('fs')
 const test = require('tap').test
 const rimraf = require('rimraf')
 const rocksdb = require('../build/Release/rocksdb.node')
+const path = os.tmpdir() + '/rocksdbBuffersTest'
 let db
 
 test('setup', function (t) {
-  const path = os.tmpdir() + '/rocksdbBuffersTest'
   rimraf.sync(path)
-
   db = rocksdb.open({create_if_missing: true}, path)
   t.ok(db)
   t.end()
@@ -41,5 +41,12 @@ test('Write opts batch test', function (t) {
   batch.put('k3', 'v3')
   db.write(opts, batch)
   t.equal(db.get('k3'), 'v3')
+  t.end()
+})
+
+test('teardown', function (t) {
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
   t.end()
 })

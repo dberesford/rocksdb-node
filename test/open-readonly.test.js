@@ -1,4 +1,5 @@
 const os = require('os')
+const fs = require('fs')
 const test = require('tap').test
 const rocksdb = require('../build/Release/rocksdb.node')
 
@@ -16,5 +17,9 @@ test('setup', function (t) {
     gotException = true
   }
   t.equal(gotException, true)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
   t.end()
 })
