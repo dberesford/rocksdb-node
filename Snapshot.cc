@@ -3,6 +3,7 @@
 #include "rocksdb/db.h"
 #include "Snapshot.h"
 #include "DBNode.h"
+#include "Errors.h"
 #include <iostream>
 
 Nan::Persistent<v8::FunctionTemplate> snapshot_constructor;
@@ -28,7 +29,7 @@ NAN_METHOD(Snapshot::New) {
   if (info.Length() == 1) {
     rocksIndex = 0;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 

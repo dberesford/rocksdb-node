@@ -4,6 +4,7 @@
 #include "Batch.h"
 #include "DBNode.h"
 #include <iostream>
+#include "Errors.h"
 //using namespace std;
 
 Nan::Persistent<v8::FunctionTemplate> batch_constructor;
@@ -31,7 +32,7 @@ NAN_METHOD(Batch::New) {
   if (info.Length() == 1) {
     rocksIndex = 0;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -89,7 +90,7 @@ NAN_METHOD(Batch::Put) {
     keyIndex = 1;
     valueIndex = 2;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -107,7 +108,7 @@ NAN_METHOD(Batch::Put) {
   }
 
   if (columnFamily == NULL) {
-    Nan::ThrowError("Column Family does not exist");
+    Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     return;
   }
 
@@ -131,7 +132,7 @@ NAN_METHOD(Batch::Delete) {
     familyIndex = 0;
     keyIndex = 1;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -149,7 +150,7 @@ NAN_METHOD(Batch::Delete) {
   }
 
   if (columnFamily == NULL) {
-    Nan::ThrowError("Column Family does not exist");
+    Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     return;
   }
 

@@ -4,6 +4,7 @@
 #include "Iterator.h"
 #include "OptionsHelper.h"
 #include "DBNode.h"
+#include "Errors.h"
 #include <iostream>
 
 Nan::Persistent<v8::FunctionTemplate> iterator_constructor;
@@ -59,7 +60,7 @@ NAN_METHOD(Iterator::New) {
     columnFamilyIndex = 1;
     rocksIndex = 2;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 
@@ -196,7 +197,7 @@ NAN_METHOD(Iterator::Seek) {
     optsIndex = 0;
     targetIndex = 1;
   } else {
-    Nan::ThrowTypeError("Wrong number of arguments");
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
     return;
   }
 

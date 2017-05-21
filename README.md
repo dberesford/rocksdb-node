@@ -496,3 +496,21 @@ Support for [Snapshots](https://github.com/facebook/rocksdb/wiki/Basic-Operation
   db.releaseSnapshot(readOptions.snapshot)
 
 ```
+
+#### Creating and Ingesting SST Files
+
+Support for [Creating and Ingesting SST Files](https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files). Usage:
+
+```javascript
+  const db = rocksdb.open({create_if_missing: true}, path)
+
+  const sstFileWriter = db.getSstFileWriter()
+  sstFileWriter.open('/tmp/file1')
+  sstFileWriter.add('a', 'b')
+  ...
+  sstFileWriter.finish()
+
+  db.ingestExternalFile('/tmp/file1')
+  console.log(db.get('a')) // 'b' now exists
+
+```

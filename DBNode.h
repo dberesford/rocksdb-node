@@ -37,6 +37,8 @@ class DBNode : public Nan::ObjectWrap {
   static void Batch(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Write(const v8::FunctionCallbackInfo<v8::Value>& info);
   static void Close(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void GetSstFileWriter(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static void IngestExternalFile(const v8::FunctionCallbackInfo<v8::Value>& info);
 
   rocksdb::DB *_db;
   rocksdb::Options _options;

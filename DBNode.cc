@@ -9,12 +9,12 @@
 #include "Iterator.h"
 #include "Snapshot.h"
 #include "Batch.h"
+#include "FileWriter.h"
 #include "rocksdb/db.h"
+#include "Errors.h"
 using namespace std;
 
 v8::Persistent<v8::Function> DBNode::constructor;
-const char* ERR_DB_NOT_OPEN = "Database is not open";
-const char* ERR_WRONG_ARGS = "Wrong number of arguments";
 
 DBNode::DBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles) {
   _options = options;
@@ -50,6 +50,8 @@ void DBNode::Init(v8::Local<v8::Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "batch", DBNode::Batch);
   NODE_SET_PROTOTYPE_METHOD(tpl, "write", DBNode::Write);
   NODE_SET_PROTOTYPE_METHOD(tpl, "close", DBNode::Close);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "getSstFileWriter", DBNode::GetSstFileWriter);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "ingestExternalFile", DBNode::IngestExternalFile);
 
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(v8::String::NewFromUtf8(isolate, "DBNode"), tpl->GetFunction());
@@ -63,15 +65,15 @@ void DBNode::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
       Nan::ThrowTypeError(ERR_WRONG_ARGS);
       return;
     }
-  
+
     v8::Local<v8::Object> opts = args[0].As<v8::Object>();
-    string path = string(*Nan::Utf8String(args[1]));    
+    string path = string(*Nan::Utf8String(args[1]));
     rocksdb::Options options;
     OptionsHelper::ProcessOpenOptions(opts, &options);
-    
+
     // check for readOnly flag - this is rocksdb-node specific
     bool readOnly = false;
-    v8::Local<v8::String> roKey = Nan::New("readOnly").ToLocalChecked();  
+    v8::Local<v8::String> roKey = Nan::New("readOnly").ToLocalChecked();
     if (opts->Has(roKey)) {
       readOnly = opts->Get(roKey)->BooleanValue();
     }
@@ -235,10 +237,10 @@ void DBNode::Put(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   if (columnFamily == NULL) {
     if (callback) {
-      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>("Column Family does not exist").ToLocalChecked()};
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
       callback->Call(1, argv);
     } else {
-      Nan::ThrowError("Column Family does not exist");
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     }
     return;
   }
@@ -350,10 +352,10 @@ void DBNode::Get(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   if (columnFamily == NULL) {
     if (callback) {
-      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>("Column Family does not exist").ToLocalChecked()};
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
       callback->Call(1, argv);
     } else {
-      Nan::ThrowError("Column Family does not exist");
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     }
     return;
   }
@@ -462,10 +464,10 @@ void DBNode::Delete(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   if (columnFamily == NULL) {
     if (callback) {
-      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>("Column Family does not exist").ToLocalChecked()};
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
       callback->Call(1, argv);
     } else {
-      Nan::ThrowError("Column Family does not exist");
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     }
     return;
   }
@@ -638,7 +640,7 @@ void DBNode::DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   s = dbNode->DeleteColumnFamily(name);
   if (s.IsNotFound()) {
-    Nan::ThrowError("Column Family not found");
+    Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
     return;
   }
 
@@ -736,5 +738,40 @@ void DBNode::Close(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (dbNode->_db) {
     delete dbNode->_db;
     dbNode->_db = NULL;
+  }
+}
+
+void DBNode::GetSstFileWriter(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  FileWriter::NewInstance(args);
+}
+
+void DBNode::IngestExternalFile(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  int pathIndex = -1;
+
+  if (args.Length() == 1) {
+    pathIndex = 0;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+  string path = string(*Nan::Utf8String(args[pathIndex]));
+
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(args.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  rocksdb::IngestExternalFileOptions ifo;
+  rocksdb::Status s = dbNode->_db->IngestExternalFile({path}, ifo);
+  if (!s.ok()) {
+    Nan::ThrowError(s.getState());
+    return;
   }
 }

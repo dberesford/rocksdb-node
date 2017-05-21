@@ -11,6 +11,7 @@
         "Iterator.cc",
         "Snapshot.cc",
         "Batch.cc",
+        "FileWriter.cc",
         "DBNode.cc"
       ],
       'include_dirs' : [
