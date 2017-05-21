@@ -53,7 +53,7 @@ db.put('node', 'rocks', function(err) {
 
 ## API
 
-'rocksdb-node' currently exports two functions:
+'rocksdb-node' currently exports the following functions:
 
 ```javascript 
 {
@@ -134,11 +134,9 @@ Open database for read only. All DB interfaces that modify data, like put/delete
 const dbRO = rocksdb.open({readOnly: true}, './myrocks') // myrocks must already exist
 ```
 
-Once you have a database object from a successful call to `open`, the following functions are available:
-
 #### Put
 
- `db.put(<options>, <column-family>, key, value, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
+ `db.put(<options>, <column-family>, key, value, <callback>)` where `<options>`, `<column-family>` and `<callback>` are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -184,7 +182,7 @@ db.put('myFamily', 'foo', 'bar')
 
 #### Get
 
- `db.get(<options>, <column-family>, key, <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
+ `db.get(<options>, <column-family>, key, <callback>)` where `<options>`, `<column-family>` and `<callback>` are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -197,7 +195,7 @@ try {
 db.get('foo', function(err, value){...})
 ```
 
-The key param for `get` can both be either a string or a buffer, and if the value you are expecting to get is a buffer, you must pass the option `buffer:true`, e.g. 
+The key param for `get` can be either a string or a buffer, and if the value you are expecting to get is a buffer, you must pass the option `buffer:true`, e.g. 
 
 ```javascript
 const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
@@ -232,7 +230,7 @@ var value = db.get('myFamily', 'foo')
 
 #### Delete
 
-`db.del(<options>, <column-family>, key,  <callback>)` where <options>, <column-family> and <callback> are optional. If no callback is passed the method is synchronous.
+`db.del(<options>, <column-family>, key,  <callback>)` where `<options>`, `<column-family>` and `<callback>` are optional. If no callback is passed the method is synchronous.
 
 ```javascript
 try {
@@ -245,7 +243,7 @@ try {
 db.del('foo', function(err){...})
 ```
 
-The key param for `del` can both be either a string or a buffer, e.g. 
+The key param for `del` can be either a string or a buffer, e.g. 
 
 ```javascript
 const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
@@ -278,7 +276,7 @@ db.del('myFamily', 'foo')
 
 #### Destroy Database
 
-`rocksdb.destroyDB(path, <options>)` where <options> is optional argument. This destroys a database, fully removing it from the file system. Database must already be closed before it can be destroyed.
+`rocksdb.destroyDB(path, <options>)` where `<options>` is optional argument. This destroys a database, fully removing it from the file system. Database must already be closed before it can be destroyed.
 
 ```javascript
   const path = os.tmpdir() + '/rocksdbDestroyTest'
