@@ -564,7 +564,7 @@ void DBNode::CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& args)
     nameIndex = 1;
   } else {
     Nan::ThrowTypeError(ERR_WRONG_ARGS);
-    return;    
+    return;
   }
 
   rocksdb::ColumnFamilyOptions options;

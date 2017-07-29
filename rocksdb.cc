@@ -13,6 +13,7 @@ void InitAll(v8::Local<v8::Object> exports, v8::Local<v8::Object> module) {
   Batch::Init();
   FileWriter::Init();
   NODE_SET_METHOD(exports, "open", DBNode::NewInstance);
+  NODE_SET_METHOD(exports, "openTransactionDB", DBNode::OpenTransactionDB);
   NODE_SET_METHOD(exports, "listColumnFamilies", DBNode::ListColumnFamilies);
   NODE_SET_METHOD(exports, "destroyDB", DBNode::DestroyDB);
 }
