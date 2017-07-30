@@ -158,12 +158,12 @@ NAN_METHOD(DBNode::Put){
   int valueIndex = -1;
   int callbackIndex = -1;
 
-  // 2 info, assume key value
+  // 2 args, assume key value
   if (info.Length() == 2) {
     keyIndex = 0;
     valueIndex = 1;
   } else if (info.Length() == 3) {
-    // 3 info is either (opts, key, value) or (key, value, callback), or (family, key, value)
+    // 3 args is either (opts, key, value) or (key, value, callback), or (family, key, value)
     if (info[2]->IsFunction()) {
       keyIndex = 0;
       valueIndex = 1;
@@ -178,7 +178,7 @@ NAN_METHOD(DBNode::Put){
       valueIndex = 2;
     }
   } else if (info.Length() == 4) {
-    // 4 info is either (opts, key, value, callback) or (family, key, value, callback)
+    // 4 args is either (opts, key, value, callback) or (family, key, value, callback)
     if (info[0]->IsObject()) {
       optsIndex = 0;
       familyIndex = 1;
@@ -272,7 +272,7 @@ NAN_METHOD(DBNode::Get){
   if (info.Length() == 1) {
     keyIndex = 0;
   } else if (info.Length() == 2) {
-    // the two info are either (opts, key), (key, callback), or (family, key)
+    // the two args are either (opts, key), (key, callback), or (family, key)
     if (info[1]->IsFunction()) {
       keyIndex = 0;
       callbackIndex = 1;
@@ -284,7 +284,7 @@ NAN_METHOD(DBNode::Get){
       keyIndex = 1;
     }
   } else if (info.Length() == 3) {
-    // the three info are either (opts, key, callback), (family, key, callback), or (family, key, callback)
+    // the three args are either (opts, key, callback), (family, key, callback), or (family, key, callback)
     if (info[0]->IsObject() && info[2]->IsFunction()) {
       optsIndex = 0;
       keyIndex = 1;
@@ -305,9 +305,9 @@ NAN_METHOD(DBNode::Get){
     callbackIndex = 3;
   } else {
     Nan::ThrowTypeError(ERR_WRONG_ARGS);
-    return;    
+    return;
   }
-  
+
   rocksdb::ReadOptions options;
   if (optsIndex != -1) {  
     v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
