@@ -42,7 +42,7 @@ NAN_METHOD(Batch::New) {
   info.GetReturnValue().Set(info.This());
 }
 
-void Batch::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void Batch::NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
   // Note: we pass an additional argument here which is the DBNode object
   // that is creating the new Batch. Batches can't be created anywhere else.

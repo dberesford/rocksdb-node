@@ -8,7 +8,7 @@ using namespace std;
 class Snapshot : public Nan::ObjectWrap {
   public:
     static void Init();
-    static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args);
     const rocksdb::Snapshot* _snapshot;
  private: 
    explicit Snapshot(rocksdb::DB* db);

@@ -9,11 +9,12 @@ using namespace std;
 
 class DBNode : public Nan::ObjectWrap {
  public:
-  static void Init(v8::Local<v8::Object> exports);
+  static void Init();
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
   inline rocksdb::DB* db() { return _db;}
-  static void ListColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void DestroyDB(const v8::FunctionCallbackInfo<v8::Value>& info);
+
+  static NAN_METHOD(ListColumnFamilies);
+  static NAN_METHOD(DestroyDB);
   rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
 
  private:
@@ -22,25 +23,24 @@ class DBNode : public Nan::ObjectWrap {
 
   rocksdb::Status DeleteColumnFamily(string family);
 
-  static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static NAN_METHOD(New);
 
   static v8::Persistent<v8::Function> constructor;
-  static void Put(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void Get(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void Delete(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void NewIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void ReleaseIterator(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void GetSnapshot(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void ReleaseSnapshot(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void GetColumnFamilies(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void CreateColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void DropColumnFamily(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void Batch(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void Write(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void Close(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void GetSstFileWriter(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void IngestExternalFile(const v8::FunctionCallbackInfo<v8::Value>& info);
-  static void OpenTransactionDB(const v8::FunctionCallbackInfo<v8::Value>& info);
+  static NAN_METHOD(Put);
+  static NAN_METHOD(Get);
+  static NAN_METHOD(Delete);
+  static NAN_METHOD(NewIterator);
+  static NAN_METHOD(ReleaseIterator);
+  static NAN_METHOD(GetSnapshot);
+  static NAN_METHOD(ReleaseSnapshot);
+  static NAN_METHOD(GetColumnFamilies);
+  static NAN_METHOD(CreateColumnFamily);
+  static NAN_METHOD(DropColumnFamily);
+  static NAN_METHOD(Batch);
+  static NAN_METHOD(Write);
+  static NAN_METHOD(Close);
+  static NAN_METHOD(GetSstFileWriter);
+  static NAN_METHOD(IngestExternalFile);
 
   rocksdb::DB *_db;
   rocksdb::Options _options;

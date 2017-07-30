@@ -8,7 +8,8 @@ using namespace std;
 class Iterator : public Nan::ObjectWrap {
   public:
     static void Init();
-    static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args);
+    //static void NewInstance(const Nan::FunctionCallbackInfo &args);
     rocksdb::Iterator* _it;
  private: 
    explicit Iterator(rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *handle, rocksdb::DB* db);

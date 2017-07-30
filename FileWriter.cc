@@ -67,7 +67,7 @@ NAN_METHOD(FileWriter::New) {
   info.GetReturnValue().Set(info.This());
 }
 
-void FileWriter::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void FileWriter::NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   // Note: we pass an additional argument here which is the DBNode object
