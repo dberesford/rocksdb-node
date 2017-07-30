@@ -83,7 +83,7 @@ NAN_METHOD(Iterator::New) {
   info.GetReturnValue().Set(info.This());
 }
 
-void Iterator::NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void Iterator::NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
 
   // Note: we pass an additional argument here which is the DBNode object

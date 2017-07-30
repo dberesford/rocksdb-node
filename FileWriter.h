@@ -8,7 +8,7 @@ using namespace std;
 class FileWriter : public Nan::ObjectWrap {
   public:
     static void Init();
-    static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args);
     rocksdb::SstFileWriter* _sstFileWriter;
  private: 
    explicit FileWriter(rocksdb::ColumnFamilyHandle *handle, rocksdb::DB* db);

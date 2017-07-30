@@ -10,7 +10,7 @@ using namespace std;
 class Batch : public Nan::ObjectWrap {
  public:
   static void Init();
-  static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& args);
   rocksdb::WriteBatch _batch;
   DBNode *_dbNode;
 
