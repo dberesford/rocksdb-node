@@ -19,12 +19,6 @@ class DBWithTTL : public DBNode {
   ~DBWithTTL();
 
   static NAN_METHOD(New);
-
-  /*
-  rocksdb::DB *_db;
-  rocksdb::Options _options;
-  string _path;
-  */
 };
 
 #endif  // DBWithTTL_H
