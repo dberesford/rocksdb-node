@@ -1,7 +1,7 @@
 #include <node.h>
 #include <nan.h>
 #include <iostream>
-#include "DBNode.h"  
+#include "DBNode.h"
 #include "PutWorker.h"
 #include "GetWorker.h"
 #include "DeleteWorker.h"
@@ -37,6 +37,11 @@ void DBNode::Init() {
   tpl->SetClassName(Nan::New("DBNode").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
+  DBNode::InitBaseDBFunctions(tpl);
+  dbnode_constructor.Reset(tpl);
+}
+
+void DBNode::InitBaseDBFunctions(v8::Local<v8::FunctionTemplate> tpl) {
   Nan::SetPrototypeMethod(tpl, "put", DBNode::Put);
   Nan::SetPrototypeMethod(tpl, "get", DBNode::Get);
   Nan::SetPrototypeMethod(tpl, "del", DBNode::Delete);
@@ -52,8 +57,7 @@ void DBNode::Init() {
   Nan::SetPrototypeMethod(tpl, "close", DBNode::Close);
   Nan::SetPrototypeMethod(tpl, "getSstFileWriter", DBNode::GetSstFileWriter);
   Nan::SetPrototypeMethod(tpl, "ingestExternalFile", DBNode::IngestExternalFile);
-
-  dbnode_constructor.Reset(tpl);
+  Nan::SetPrototypeMethod(tpl, "compactRange", DBNode::CompactRange);
 }
 
 NAN_METHOD(DBNode::New){
@@ -800,4 +804,15 @@ NAN_METHOD(DBNode::DestroyDB) {
     Nan::ThrowError(s.getState());
     return;
   }
+}
+
+// TODO - WIP - necessary to implement DBWithTTL
+NAN_METHOD(DBNode::CompactRange) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(info.Holder());
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  dbNode->_db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr);
 }

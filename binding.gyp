@@ -12,7 +12,8 @@
         "Snapshot.cc",
         "Batch.cc",
         "FileWriter.cc",
-        "DBNode.cc"
+        "DBNode.cc",
+        "DBWithTTL.cc"
       ],
       'include_dirs' : [
         "<!(node -e \"require('nan')\")"

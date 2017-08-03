@@ -58,6 +58,7 @@ db.put('node', 'rocks', function(err) {
 ```javascript 
 {
   open,
+  openDBWithTTL,
   listColumnFamilies
   destroyDB
 }
@@ -438,6 +439,35 @@ Drops a Column Family:
 
 ```javascript 
 db.dropColumnFamily('myFamily')
+```
+
+### openDBWithTTL
+
+Opens a [DBWithTTL](https://github.com/facebook/rocksdb/wiki/Time-to-Live). This database is a specialized form of the main RocksDB database (returned by `open`), it inherits all the regular RocksDB database functions.
+
+ `rocksdb.openDBWithTTL(<options>, <path>, <ttl>)`, where `<ttl>` is measured in seconds. E.g.
+
+```javascript
+const dbWithTTL = rocksdb.openDBWithTTL({create_if_missing: true}, path, 1)
+```
+
+All the same options that can be passed to #open() can be passed here. 
+
+Note: the TTL passed applies to all Column Families.
+
+Example:
+
+```javascript
+  const db = rocksdb.openDBWithTTL({create_if_missing: true}, path, 1)  // 1 second ttl..
+  db.put('foo', 'bar')
+  console.log(db.get('foo'))
+
+  // sleep for 2 seconds, then foo should be removed (after compact)
+  setTimeout(() => {
+    db.compactRange()
+    console.log(db.get('foo'))
+    db.close()
+  }, 2000);
 ```
 
 ### List Column Families
