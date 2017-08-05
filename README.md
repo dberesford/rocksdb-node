@@ -58,6 +58,7 @@ db.put('node', 'rocks', function(err) {
 ```javascript 
 {
   open,
+  openDBWithTTL,
   listColumnFamilies
   destroyDB
 }
@@ -397,8 +398,6 @@ if (err) throw err;
 
 `db.releaseIterator(iterator)`, releases the iterator, this should be called when you are finished iterating.
 
-
-
 ```javascript
 const iter = db.newIterator(readOpts)
 ...
@@ -438,6 +437,88 @@ Drops a Column Family:
 
 ```javascript 
 db.dropColumnFamily('myFamily')
+```
+
+#### Compact Range
+
+Support for [Compaction](https://github.com/facebook/rocksdb/wiki/Compaction).
+
+`db.compactRange(<compactrange-options>, <column-family>, <from>, <to>, <callback>)` where all parameters are optional, i.e. the following combinations are all possible:
+
+```javascript
+db.compactRange()
+db.compactRange(options)
+db.compactRange(callback)
+db.compactRange(columnFamily)
+db.compactRange(from, to)
+db.compactRange(options, callback)
+db.compactRange(options, from, to)
+db.compactRange(columnFamily, from, to)
+db.compactRange(options, columnFamily, callback)
+db.compactRange(options, columnFamily, from, to)
+db.compactRange(options, from, to, callback)
+db.compactRange(columnFamily, from, to, callback)
+db.compactRange(options, columnFamily, from, to, callback)
+```
+The following [options](https://github.com/facebook/rocksdb/blob/3c327ac2d0fd50bbd82fe1f1af5de909dad769e6/include/rocksdb/options.h#L1152) are supported:
+
+```javascript
+const opts = {
+  // If true, no other compaction will run at the same time as this manual compaction
+  exclusive_manual_compaction: true,
+
+  // If true, compacted files will be moved to the minimum level capable of holding the data or given level (specified non-negative target_level). 
+  change_level: false,
+
+  // If change_level is true and target_level have non-negative value, compacted  files will be moved to target_level.
+  target_level: -1,
+
+  // Compaction outputs will be placed in options.db_paths[target_path_id].  Behavior is undefined if target_path_id is out of range.
+  target_path_id: 0
+}
+```
+
+Example usage:
+```javascript
+
+  db.put('foo1', 'bar1')
+  db.put('foo2', 'bar2')
+  db.put('foo3', 'bar3')
+
+  db.compactRange()
+  db.compactRange('foo1', 'foo3')
+  db.compactRange((err) => {
+...
+
+```
+
+### openDBWithTTL
+
+Opens a [DBWithTTL](https://github.com/facebook/rocksdb/wiki/Time-to-Live). This database is a specialized form of the main RocksDB database (returned by `open`), it inherits all the regular RocksDB database functions.
+
+ `rocksdb.openDBWithTTL(<options>, <path>, <ttl>)`, where `<ttl>` is measured in seconds. E.g.
+
+```javascript
+const dbWithTTL = rocksdb.openDBWithTTL({create_if_missing: true}, path, 1)
+```
+
+All the same options that can be passed to #open() can be passed here. 
+
+Note: the TTL passed applies to all Column Families.
+
+Example:
+
+```javascript
+  const db = rocksdb.openDBWithTTL({create_if_missing: true}, path, 1)  // 1 second ttl..
+  db.put('foo', 'bar')
+  console.log(db.get('foo'))
+
+  // sleep for 2 seconds, then foo should be removed (after compact)
+  setTimeout(() => {
+    db.compactRange()
+    console.log(db.get('foo'))
+    db.close()
+  }, 2000);
 ```
 
 ### List Column Families

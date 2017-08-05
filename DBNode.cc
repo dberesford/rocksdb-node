@@ -1,7 +1,7 @@
 #include <node.h>
 #include <nan.h>
 #include <iostream>
-#include "DBNode.h"  
+#include "DBNode.h"
 #include "PutWorker.h"
 #include "GetWorker.h"
 #include "DeleteWorker.h"
@@ -12,6 +12,7 @@
 #include "FileWriter.h"
 #include "rocksdb/db.h"
 #include "Errors.h"
+#include "CompactRangeWorker.h"
 using namespace std;
 
 Nan::Persistent<v8::FunctionTemplate> dbnode_constructor;
@@ -37,6 +38,11 @@ void DBNode::Init() {
   tpl->SetClassName(Nan::New("DBNode").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
+  DBNode::InitBaseDBFunctions(tpl);
+  dbnode_constructor.Reset(tpl);
+}
+
+void DBNode::InitBaseDBFunctions(v8::Local<v8::FunctionTemplate> tpl) {
   Nan::SetPrototypeMethod(tpl, "put", DBNode::Put);
   Nan::SetPrototypeMethod(tpl, "get", DBNode::Get);
   Nan::SetPrototypeMethod(tpl, "del", DBNode::Delete);
@@ -52,8 +58,7 @@ void DBNode::Init() {
   Nan::SetPrototypeMethod(tpl, "close", DBNode::Close);
   Nan::SetPrototypeMethod(tpl, "getSstFileWriter", DBNode::GetSstFileWriter);
   Nan::SetPrototypeMethod(tpl, "ingestExternalFile", DBNode::IngestExternalFile);
-
-  dbnode_constructor.Reset(tpl);
+  Nan::SetPrototypeMethod(tpl, "compactRange", DBNode::CompactRange);
 }
 
 NAN_METHOD(DBNode::New){
@@ -198,7 +203,7 @@ NAN_METHOD(DBNode::Put){
     callbackIndex = 4;
   } else {
     Nan::ThrowTypeError(ERR_WRONG_ARGS);
-    return;    
+    return;
   }
 
   Nan::Callback *callback = NULL;
@@ -207,7 +212,7 @@ NAN_METHOD(DBNode::Put){
   }
 
   rocksdb::WriteOptions options;
-  if (optsIndex != -1) {  
+  if (optsIndex != -1) {
     v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
     OptionsHelper::ProcessWriteOptions(opts, &options);
   }
@@ -215,7 +220,7 @@ NAN_METHOD(DBNode::Put){
   // TODO - check for key undefined or null
   v8::Local<v8::Object> keyObj = info[keyIndex].As<v8::Object>();
   v8::Local<v8::Object> valueObj = info[valueIndex].As<v8::Object>();
-  
+
   DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(info.Holder());
 
   if (!dbNode->_db) {
@@ -244,7 +249,7 @@ NAN_METHOD(DBNode::Put){
   rocksdb::Status s;
 
 
-  if (callback) {  
+  if (callback) {
     PutWorker *pw = new PutWorker(callback, dbNode->_db, options, columnFamily, keyObj, valueObj);
     Nan::AsyncQueueWorker(pw);
   } else {
@@ -799,5 +804,153 @@ NAN_METHOD(DBNode::DestroyDB) {
   if (!s.ok()) {
     Nan::ThrowError(s.getState());
     return;
+  }
+}
+
+// see https://github.com/facebook/rocksdb/wiki/Compaction
+NAN_METHOD(DBNode::CompactRange) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(info.Holder());
+
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  int optsIndex = -1;
+  int familyIndex = -1;
+  int fromIndex = -1;
+  int toIndex = -1;
+  int callbackIndex = -1;
+
+  // if only one arg, assume it's either the options or the callback
+  if (info.Length() == 1) {
+    if (info[0]->IsFunction()) {
+      callbackIndex = 0;
+    } else if (info[0]->IsString()) {
+      familyIndex = 0;
+    } else {
+      optsIndex = 0;
+    }
+  } else if (info.Length() == 2) {
+    // assume two args are either (from, to) or (opts, callback) or (opts, columnFamily)
+    if (info[0]->IsString() && info[1]->IsString()){
+      fromIndex = 0;
+      toIndex = 1;
+    } else if (info[0]->IsObject() && info[1]->IsFunction()) {
+      optsIndex = 0;
+      callbackIndex = 1;
+    } else {
+      optsIndex = 0;
+      familyIndex = 1;
+    }
+  } else if (info.Length() == 3) {
+    // three args, assume either (columnFamily, from, to) or (opts, from, to) or (from, to, callback) or (opts, columnFamily, callback)
+    if (info[0]->IsString() && info[1]->IsString() && info[2]->IsString()) {
+      familyIndex = 0;
+      fromIndex = 1;
+      toIndex = 2;
+    } else if (info[0]->IsObject() && info[1]->IsString() && info[2]->IsString()) {
+      optsIndex = 0;
+      fromIndex = 1;
+      toIndex = 2;
+    } else if (info[0]->IsString() && info[1]->IsString() && info[2]->IsFunction()) {
+      fromIndex = 0;
+      toIndex = 1;
+      callbackIndex = 2;
+    } else {
+      optsIndex = 0;
+      familyIndex = 1;
+      callbackIndex = 2;
+    }
+  } else if (info.Length() == 4) {
+    // four args, assume either (columnFamily, from, to, callback) or (opts, from, to, callback) or (opts, columnFamily, from, to)
+    if (info[0]->IsString() && info[1]->IsString() && info[2]->IsString() && info[3]->IsFunction()) {
+      familyIndex = 0;
+      fromIndex = 1;
+      toIndex = 2;
+      callbackIndex = 3;
+    } else if (info[0]->IsObject() && info[1]->IsString() && info[2]->IsString() && info[3]->IsFunction()) {
+      optsIndex = 0;
+      fromIndex = 1;
+      toIndex = 2;
+      callbackIndex = 3;
+    } else {
+      optsIndex = 0;
+      familyIndex = 1;
+      fromIndex = 2;
+      toIndex = 3;
+    }
+  } else if (info.Length() == 5) {
+    optsIndex = 0;
+    familyIndex = 1;
+    fromIndex = 2;
+    toIndex = 3;
+    callbackIndex = 4;
+  } else {
+    if (info.Length() != 0) {
+      Nan::ThrowTypeError(ERR_WRONG_ARGS);
+      return;
+    }
+  }
+
+  Nan::Callback *callback = NULL;
+  if (callbackIndex != -1) {
+    callback = new Nan::Callback(info[callbackIndex].As<v8::Function>());
+  }
+
+  rocksdb::ColumnFamilyHandle *columnFamily = NULL;
+  if (familyIndex != -1) {
+    string family = string(*Nan::Utf8String(info[familyIndex]));
+    columnFamily = dbNode->GetColumnFamily(family);
+  } else {
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+  }
+
+  if (columnFamily == NULL) {
+    if (callback) {
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
+      callback->Call(1, argv);
+    } else {
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
+    }
+    return;
+  }
+
+  rocksdb::CompactRangeOptions options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessCompactRangeOptions(opts, &options);
+  } else {
+    options = rocksdb::CompactRangeOptions();
+  }
+
+  rocksdb::Status s;
+
+  v8::Local<v8::Object> fromObj = fromIndex == -1 ? Nan::New<v8::Object>() : info[fromIndex].As<v8::Object>();
+  v8::Local<v8::Object> toObj = toIndex == -1 ? Nan::New<v8::Object>() : info[toIndex].As<v8::Object>();
+
+  if (callback) {
+    CompactRangeWorker *crw = new CompactRangeWorker(callback, dbNode->_db, options, NULL, fromObj, toObj);
+    Nan::AsyncQueueWorker(crw);
+  } else {
+    rocksdb::Slice* from = NULL;
+    if (fromIndex != -1) {
+      from = node::Buffer::HasInstance(fromObj) ? new rocksdb::Slice(node::Buffer::Data(fromObj), node::Buffer::Length(fromObj))
+        : new rocksdb::Slice(string(*Nan::Utf8String(fromObj)));
+    }
+
+    rocksdb::Slice* to = NULL;
+    if (toIndex != -1) {
+      to = node::Buffer::HasInstance(toObj) ? new rocksdb::Slice(node::Buffer::Data(toObj), node::Buffer::Length(toObj))
+        : new rocksdb::Slice(string(*Nan::Utf8String(toObj)));
+    }
+
+    s = dbNode->_db->CompactRange(options, from, to);
+    if (!s.ok()) {
+      Nan::ThrowError(s.getState());
+    }
+
+    if (from) delete from;
+    if (to) delete to;
   }
 }

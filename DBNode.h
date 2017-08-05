@@ -10,6 +10,8 @@ using namespace std;
 class DBNode : public Nan::ObjectWrap {
  public:
   static void Init();
+  static void InitBaseDBFunctions(v8::Local<v8::FunctionTemplate> tpl);
+
   static void NewInstance(const v8::FunctionCallbackInfo<v8::Value>& args);
   inline rocksdb::DB* db() { return _db;}
 
@@ -17,15 +19,9 @@ class DBNode : public Nan::ObjectWrap {
   static NAN_METHOD(DestroyDB);
   rocksdb::ColumnFamilyHandle* GetColumnFamily(string family);
 
- private:
   explicit DBNode(rocksdb::Options options, string path, rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> *cfHandles);
   ~DBNode();
 
-  rocksdb::Status DeleteColumnFamily(string family);
-
-  static NAN_METHOD(New);
-
-  static v8::Persistent<v8::Function> constructor;
   static NAN_METHOD(Put);
   static NAN_METHOD(Get);
   static NAN_METHOD(Delete);
@@ -41,6 +37,12 @@ class DBNode : public Nan::ObjectWrap {
   static NAN_METHOD(Close);
   static NAN_METHOD(GetSstFileWriter);
   static NAN_METHOD(IngestExternalFile);
+  static NAN_METHOD(CompactRange);
+
+ private:
+  rocksdb::Status DeleteColumnFamily(string family);
+
+  static NAN_METHOD(New);
 
   rocksdb::DB *_db;
   rocksdb::Options _options;
