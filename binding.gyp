@@ -13,7 +13,8 @@
         "Batch.cc",
         "FileWriter.cc",
         "DBNode.cc",
-        "DBWithTTL.cc"
+        "DBWithTTL.cc",
+        "CompactRangeWorker.cc"
       ],
       'include_dirs' : [
         "<!(node -e \"require('nan')\")"
