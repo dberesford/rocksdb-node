@@ -27,7 +27,7 @@ CompactRangeWorker::~CompactRangeWorker() {
 }
 
 void CompactRangeWorker::Execute () {
-  _status = _db->CompactRange(_options, _from, _to);
+  _status = _db->CompactRange(_options, _family, _from, _to);
 }
 
 void CompactRangeWorker::HandleOKCallback () {
