@@ -59,6 +59,7 @@ void DBNode::InitBaseDBFunctions(v8::Local<v8::FunctionTemplate> tpl) {
   Nan::SetPrototypeMethod(tpl, "getSstFileWriter", DBNode::GetSstFileWriter);
   Nan::SetPrototypeMethod(tpl, "ingestExternalFile", DBNode::IngestExternalFile);
   Nan::SetPrototypeMethod(tpl, "compactRange", DBNode::CompactRange);
+  Nan::SetPrototypeMethod(tpl, "multiGet", DBNode::MultiGet);
 }
 
 NAN_METHOD(DBNode::New){
@@ -953,4 +954,157 @@ NAN_METHOD(DBNode::CompactRange) {
     if (from) delete from;
     if (to) delete to;
   }
+}
+
+NAN_METHOD(DBNode::MultiGet) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(info.Holder());
+
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  int optsIndex = -1;
+  int familiesIndex = -1;
+  int keysIndex = -1;
+  int callbackIndex = -1;
+
+  if (info.Length() == 1) {
+    // one arg assume array of keys
+    keysIndex = 0;
+  } else if (info.Length() == 2) {
+    // assume two args are either (opts, keys) or (keys, callback)
+    if (info[0]->IsObject() && info[1]->IsArray()) {
+      optsIndex = 0;
+      callbackIndex = 1;
+    } else {
+      keysIndex = 0;
+      callbackIndex = 1;
+    }
+  } else if (info.Length() == 3) {
+    // three args, assume either (columnFamilies, keys, callback) or (opts, columnFamilies, keys) or (opts, keys, callback)
+    if (info[0]->IsArray() && info[1]->IsArray() && info[2]->IsFunction()) {
+      familiesIndex = 0;
+      keysIndex = 1;
+      callbackIndex = 2;
+    } else if (info[0]->IsObject() && info[1]->IsArray() && info[2]->IsArray()) {
+      optsIndex = 0;
+      familiesIndex = 1;
+      keysIndex = 2;
+    } else {
+      optsIndex = 0;
+      keysIndex = 1;
+      callbackIndex = 2;
+    }
+  } else if (info.Length() == 4) {
+    // four args, assume (opts, columnFamily, keys, callback) 
+    optsIndex = 0;
+    familiesIndex = 1;
+    keysIndex = 2;
+    callbackIndex = 3;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+
+  Nan::Callback *callback = NULL;
+  if (callbackIndex != -1) {
+    callback = new Nan::Callback(info[callbackIndex].As<v8::Function>());
+  }
+
+  rocksdb::ReadOptions options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessReadOptions(opts, &options);
+  }
+
+/* TODO!!!
+  rocksdb::ColumnFamilyHandle *columnFamily = NULL;
+  if (familyIndex != -1) {
+    string family = string(*Nan::Utf8String(info[familyIndex]));
+    columnFamily = dbNode->GetColumnFamily(family);
+  } else {
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+  }
+
+  if (columnFamily == NULL) {
+    if (callback) {
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
+      callback->Call(1, argv);
+    } else {
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
+    }
+    return;
+  }
+*/
+
+  v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
+  std::vector<rocksdb::Slice> keys;
+  std::vector<int> ints;
+  for (unsigned int i = 0; i < keysArray->Length(); i++)
+  {
+    std::string *str = new string(*Nan::Utf8String(keysArray->Get(i)));
+    rocksdb::Slice s = rocksdb::Slice(*str);
+    keys.push_back(s);
+  }
+
+  std::vector<rocksdb::Status> ss;
+  std::vector<std::string> values;
+
+  ss = dbNode->_db->MultiGet(options, keys, &values);
+  for (std::vector<rocksdb::Status>::iterator it = ss.begin() ; it != ss.end(); ++it) {
+    rocksdb::Status s = *it;
+    if (!s.ok()) {
+      Nan::ThrowError(s.getState());
+    }
+  }
+
+  v8::Local<v8::Array> arr = Nan::New<v8::Array>();
+  for (std::vector<string>::iterator it = values.begin() ; it != values.end(); ++it) {
+    Nan::Set(arr, it - values.begin(), Nan::New(*it).ToLocalChecked());
+  }
+
+  info.GetReturnValue().Set(arr);
+
+  // TODO - free keys?!
+
+/*
+  rocksdb::CompactRangeOptions options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessCompactRangeOptions(opts, &options);
+  } else {
+    options = rocksdb::CompactRangeOptions();
+  }
+
+  rocksdb::Status s;
+
+  v8::Local<v8::Object> fromObj = fromIndex == -1 ? Nan::New<v8::Object>() : info[fromIndex].As<v8::Object>();
+  v8::Local<v8::Object> toObj = toIndex == -1 ? Nan::New<v8::Object>() : info[toIndex].As<v8::Object>();
+
+  if (callback) {
+    CompactRangeWorker *crw = new CompactRangeWorker(callback, dbNode->_db, options, NULL, fromObj, toObj);
+    Nan::AsyncQueueWorker(crw);
+  } else {
+    rocksdb::Slice* from = NULL;
+    if (fromIndex != -1) {
+      from = node::Buffer::HasInstance(fromObj) ? new rocksdb::Slice(node::Buffer::Data(fromObj), node::Buffer::Length(fromObj))
+        : new rocksdb::Slice(string(*Nan::Utf8String(fromObj)));
+    }
+
+    rocksdb::Slice* to = NULL;
+    if (toIndex != -1) {
+      to = node::Buffer::HasInstance(toObj) ? new rocksdb::Slice(node::Buffer::Data(toObj), node::Buffer::Length(toObj))
+        : new rocksdb::Slice(string(*Nan::Utf8String(toObj)));
+    }
+
+    s = dbNode->_db->CompactRange(options, from, to);
+    if (!s.ok()) {
+      Nan::ThrowError(s.getState());
+    }
+
+    if (from) delete from;
+    if (to) delete to;
+  }
+*/
 }
