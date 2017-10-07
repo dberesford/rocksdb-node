@@ -1040,7 +1040,6 @@ NAN_METHOD(DBNode::MultiGet) {
 
   v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
   std::vector<rocksdb::Slice> keys;
-  std::vector<int> ints;
   for (unsigned int i = 0; i < keysArray->Length(); i++)
   {
     std::string *str = new string(*Nan::Utf8String(keysArray->Get(i)));
@@ -1052,21 +1051,27 @@ NAN_METHOD(DBNode::MultiGet) {
   std::vector<std::string> values;
 
   ss = dbNode->_db->MultiGet(options, keys, &values);
-  for (std::vector<rocksdb::Status>::iterator it = ss.begin() ; it != ss.end(); ++it) {
-    rocksdb::Status s = *it;
-    if (!s.ok()) {
-      Nan::ThrowError(s.getState());
-    }
-  }
 
   v8::Local<v8::Array> arr = Nan::New<v8::Array>();
-  for (std::vector<string>::iterator it = values.begin() ; it != values.end(); ++it) {
-    Nan::Set(arr, it - values.begin(), Nan::New(*it).ToLocalChecked());
+  for(unsigned i = 0; i != values.size(); i++) {
+    rocksdb::Status s = ss[i];
+    if (s.ok()) {
+      std::string val = values[i];
+      Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+    } else if (s.IsNotFound()) {
+      Nan::Set(arr, i, Nan::Null());
+    } else {
+      // TODO - verify this is correct...]
+      Nan::ThrowError(s.getState());
+    }
   }
 
   info.GetReturnValue().Set(arr);
 
   // TODO - free keys?!
+  // TODO - async
+  // TODO - column families
+  // TODO - buffer k/v
 
 /*
   rocksdb::CompactRangeOptions options;
