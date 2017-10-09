@@ -13,6 +13,7 @@
 #include "rocksdb/db.h"
 #include "Errors.h"
 #include "CompactRangeWorker.h"
+#include "MultiGetWorker.h"
 using namespace std;
 
 Nan::Persistent<v8::FunctionTemplate> dbnode_constructor;
@@ -315,7 +316,7 @@ NAN_METHOD(DBNode::Get){
   }
 
   rocksdb::ReadOptions options;
-  if (optsIndex != -1) {  
+  if (optsIndex != -1) {
     v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
     OptionsHelper::ProcessReadOptions(opts, &options);
   }
@@ -1039,39 +1040,46 @@ NAN_METHOD(DBNode::MultiGet) {
 */
 
   v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
-  std::vector<rocksdb::Slice> keys;
-  for (unsigned int i = 0; i < keysArray->Length(); i++)
-  {
-    std::string *str = new string(*Nan::Utf8String(keysArray->Get(i)));
-    rocksdb::Slice s = rocksdb::Slice(*str);
-    keys.push_back(s);
-  }
+  if (callback) {
+    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, options, keysArray));
+  } else {
 
-  std::vector<rocksdb::Status> ss;
-  std::vector<std::string> values;
-
-  ss = dbNode->_db->MultiGet(options, keys, &values);
-
-  v8::Local<v8::Array> arr = Nan::New<v8::Array>();
-  for(unsigned i = 0; i != values.size(); i++) {
-    rocksdb::Status s = ss[i];
-    if (s.ok()) {
-      std::string val = values[i];
-      Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
-    } else if (s.IsNotFound()) {
-      Nan::Set(arr, i, Nan::Null());
-    } else {
-      // TODO - verify this is correct...]
-      Nan::ThrowError(s.getState());
+    // TODO - handle buffer keys, maybe pass in opts array?
+    std::vector<rocksdb::Slice> keys;
+    for (unsigned int i = 0; i < keysArray->Length(); i++) {
+      std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
+      rocksdb::Slice s = rocksdb::Slice(*str);
+      keys.push_back(s);
     }
-  }
 
-  info.GetReturnValue().Set(arr);
+    std::vector<rocksdb::Status> statuss;
+    std::vector<std::string> values;
+
+    statuss = dbNode->_db->MultiGet(options, keys, &values);
+
+    v8::Local<v8::Array> arr = Nan::New<v8::Array>();
+    for(unsigned i = 0; i != values.size(); i++) {
+      rocksdb::Status s = statuss[i];
+      if (s.ok()) {
+        std::string val = values[i];
+        Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+      } else if (s.IsNotFound()) {
+        Nan::Set(arr, i, Nan::Null());
+      } else {
+        // TODO - verify this is correct...]
+        Nan::ThrowError(s.getState());
+      }
+    }
+
+    info.GetReturnValue().Set(arr);
+  }
 
   // TODO - free keys?!
   // TODO - async
   // TODO - column families
   // TODO - buffer k/v
+  // TODO - test all arg combos
+  // TODO - document
 
 /*
   rocksdb::CompactRangeOptions options;

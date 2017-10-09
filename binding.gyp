@@ -14,7 +14,8 @@
         "FileWriter.cc",
         "DBNode.cc",
         "DBWithTTL.cc",
-        "CompactRangeWorker.cc"
+        "CompactRangeWorker.cc",
+        "MultiGetWorker.cc"
       ],
       'include_dirs' : [
         "<!(node -e \"require('nan')\")"
