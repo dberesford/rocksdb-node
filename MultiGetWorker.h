@@ -6,7 +6,7 @@
 
 class MultiGetWorker : public Nan::AsyncWorker {
  public:
-  MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ReadOptions options, v8::Local<v8::Array> &keysArray);
+  MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *family, v8::Local<v8::Array> &keysArray);
   ~MultiGetWorker();
   virtual void Execute();
   virtual void HandleOKCallback ();
@@ -17,6 +17,7 @@ class MultiGetWorker : public Nan::AsyncWorker {
   std::vector<rocksdb::Status> _statuss;
   std::vector<std::string> _values;
   rocksdb::ReadOptions _options;
+  std::vector<rocksdb::ColumnFamilyHandle*> _families;
   v8::Local<v8::Array> _keysArray;
 };
 

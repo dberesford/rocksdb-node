@@ -2,8 +2,8 @@
 #include "MultiGetWorker.h"
 #include "rocksdb/db.h"
 
-MultiGetWorker::MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ReadOptions options, v8::Local<v8::Array> &keysArray)
-    : AsyncWorker(callback), _db(db), _options(options), _keysArray(keysArray) {
+MultiGetWorker::MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *columnFamily, v8::Local<v8::Array> &keysArray)
+  : AsyncWorker(callback), _db(db), _options(options), _keysArray(keysArray) {
   SaveToPersistent("key", keysArray);
 
   for (unsigned int i = 0; i < keysArray->Length(); i++) {
@@ -11,12 +11,19 @@ MultiGetWorker::MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb
     rocksdb::Slice s = rocksdb::Slice(*str);
     _keys.push_back(s);
   }
+
+  // Currently just one column family passed, i.e. multigets only supported in one column
+  // Change here in future to support passing array of cf handles
+  for (unsigned int i = 0; i < keysArray->Length(); i++) {
+    _families.push_back(columnFamily);
+  }
+
 }
 
 MultiGetWorker::~MultiGetWorker() {}
 
 void MultiGetWorker::Execute () {
-  _statuss = _db->MultiGet(_options, _keys, &_values);
+  _statuss = _db->MultiGet(_options, _families, _keys, &_values);
 }
 
 void MultiGetWorker::HandleOKCallback () {

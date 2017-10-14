@@ -966,7 +966,7 @@ NAN_METHOD(DBNode::MultiGet) {
   }
 
   int optsIndex = -1;
-  int familiesIndex = -1;
+  int familyIndex = -1;
   int keysIndex = -1;
   int callbackIndex = -1;
 
@@ -974,23 +974,26 @@ NAN_METHOD(DBNode::MultiGet) {
     // one arg assume array of keys
     keysIndex = 0;
   } else if (info.Length() == 2) {
-    // assume two args are either (opts, keys) or (keys, callback)
+    // assume two args could be (opts, keys), (keys, callback) or (col, keys)
     if (info[0]->IsObject() && info[1]->IsArray()) {
       optsIndex = 0;
       callbackIndex = 1;
+    } else if(info[0]->IsString() && info[1]->IsArray()) {
+      familyIndex = 0;
+      keysIndex = 1;
     } else {
       keysIndex = 0;
       callbackIndex = 1;
     }
   } else if (info.Length() == 3) {
-    // three args, assume either (columnFamilies, keys, callback) or (opts, columnFamilies, keys) or (opts, keys, callback)
-    if (info[0]->IsArray() && info[1]->IsArray() && info[2]->IsFunction()) {
-      familiesIndex = 0;
+    // three args, assume either (columnFamily, keys, callback) or (opts, columnFamily, keys) or (opts, keys, callback)
+    if (info[0]->IsString() && info[1]->IsArray() && info[2]->IsFunction()) {
+      familyIndex = 0;
       keysIndex = 1;
       callbackIndex = 2;
-    } else if (info[0]->IsObject() && info[1]->IsArray() && info[2]->IsArray()) {
+    } else if (info[0]->IsObject() && info[1]->IsString() && info[2]->IsArray()) {
       optsIndex = 0;
-      familiesIndex = 1;
+      familyIndex = 1;
       keysIndex = 2;
     } else {
       optsIndex = 0;
@@ -1000,7 +1003,7 @@ NAN_METHOD(DBNode::MultiGet) {
   } else if (info.Length() == 4) {
     // four args, assume (opts, columnFamily, keys, callback) 
     optsIndex = 0;
-    familiesIndex = 1;
+    familyIndex = 1;
     keysIndex = 2;
     callbackIndex = 3;
   } else {
@@ -1019,7 +1022,6 @@ NAN_METHOD(DBNode::MultiGet) {
     OptionsHelper::ProcessReadOptions(opts, &options);
   }
 
-/* TODO!!!
   rocksdb::ColumnFamilyHandle *columnFamily = NULL;
   if (familyIndex != -1) {
     string family = string(*Nan::Utf8String(info[familyIndex]));
@@ -1037,11 +1039,10 @@ NAN_METHOD(DBNode::MultiGet) {
     }
     return;
   }
-*/
 
   v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
   if (callback) {
-    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, options, keysArray));
+    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, options, columnFamily, keysArray));
   } else {
 
     // TODO - handle buffer keys, maybe pass in opts array?
@@ -1052,10 +1053,17 @@ NAN_METHOD(DBNode::MultiGet) {
       keys.push_back(s);
     }
 
+    // Currently just one column family passed, i.e. multigets only supported in one column
+    // Change here in future to support passing array of cf handles
+    std::vector<rocksdb::ColumnFamilyHandle*>families;
+    for (unsigned int i = 0; i < keysArray->Length(); i++) {
+      families.push_back(columnFamily);
+    }
+
     std::vector<rocksdb::Status> statuss;
     std::vector<std::string> values;
 
-    statuss = dbNode->_db->MultiGet(options, keys, &values);
+    statuss = dbNode->_db->MultiGet(options, families, keys, &values);
 
     v8::Local<v8::Array> arr = Nan::New<v8::Array>();
     for(unsigned i = 0; i != values.size(); i++) {
@@ -1075,8 +1083,6 @@ NAN_METHOD(DBNode::MultiGet) {
   }
 
   // TODO - free keys?!
-  // TODO - async
-  // TODO - column families
   // TODO - buffer k/v
   // TODO - test all arg combos
   // TODO - document
