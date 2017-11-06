@@ -38,6 +38,7 @@ class DBNode : public Nan::ObjectWrap {
   static NAN_METHOD(GetSstFileWriter);
   static NAN_METHOD(IngestExternalFile);
   static NAN_METHOD(CompactRange);
+  static NAN_METHOD(MultiGet);
 
  private:
   rocksdb::Status DeleteColumnFamily(string family);

@@ -13,6 +13,7 @@
 #include "rocksdb/db.h"
 #include "Errors.h"
 #include "CompactRangeWorker.h"
+#include "MultiGetWorker.h"
 using namespace std;
 
 Nan::Persistent<v8::FunctionTemplate> dbnode_constructor;
@@ -59,6 +60,7 @@ void DBNode::InitBaseDBFunctions(v8::Local<v8::FunctionTemplate> tpl) {
   Nan::SetPrototypeMethod(tpl, "getSstFileWriter", DBNode::GetSstFileWriter);
   Nan::SetPrototypeMethod(tpl, "ingestExternalFile", DBNode::IngestExternalFile);
   Nan::SetPrototypeMethod(tpl, "compactRange", DBNode::CompactRange);
+  Nan::SetPrototypeMethod(tpl, "multiGet", DBNode::MultiGet);
 }
 
 NAN_METHOD(DBNode::New){
@@ -314,7 +316,7 @@ NAN_METHOD(DBNode::Get){
   }
 
   rocksdb::ReadOptions options;
-  if (optsIndex != -1) {  
+  if (optsIndex != -1) {
     v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
     OptionsHelper::ProcessReadOptions(opts, &options);
   }
@@ -952,5 +954,147 @@ NAN_METHOD(DBNode::CompactRange) {
 
     if (from) delete from;
     if (to) delete to;
+  }
+}
+
+NAN_METHOD(DBNode::MultiGet) {
+  DBNode* dbNode = ObjectWrap::Unwrap<DBNode>(info.Holder());
+
+  if (!dbNode->_db) {
+    Nan::ThrowError(ERR_DB_NOT_OPEN);
+    return;
+  }
+
+  int optsIndex = -1;
+  int familyIndex = -1;
+  int keysIndex = -1;
+  int callbackIndex = -1;
+
+  if (info.Length() == 1) {
+    // one arg assume array of keys
+    keysIndex = 0;
+  } else if (info.Length() == 2) {
+    // assume two args could be (opts, keys), (keys, callback) or (col, keys)
+    if (info[0]->IsObject() && info[1]->IsArray()) {
+      optsIndex = 0;
+      keysIndex = 1;
+    } else if(info[0]->IsString() && info[1]->IsArray()) {
+      familyIndex = 0;
+      keysIndex = 1;
+    } else {
+      keysIndex = 0;
+      callbackIndex = 1;
+    }
+  } else if (info.Length() == 3) {
+    // three args, assume either (columnFamily, keys, callback) or (opts, columnFamily, keys) or (opts, keys, callback)
+    if (info[0]->IsString() && info[1]->IsArray() && info[2]->IsFunction()) {
+      familyIndex = 0;
+      keysIndex = 1;
+      callbackIndex = 2;
+    } else if (info[0]->IsObject() && info[1]->IsString() && info[2]->IsArray()) {
+      optsIndex = 0;
+      familyIndex = 1;
+      keysIndex = 2;
+    } else {
+      optsIndex = 0;
+      keysIndex = 1;
+      callbackIndex = 2;
+    }
+  } else if (info.Length() == 4) {
+    // four args, assume (opts, columnFamily, keys, callback) 
+    optsIndex = 0;
+    familyIndex = 1;
+    keysIndex = 2;
+    callbackIndex = 3;
+  } else {
+    Nan::ThrowTypeError(ERR_WRONG_ARGS);
+    return;
+  }
+
+  Nan::Callback *callback = NULL;
+  if (callbackIndex != -1) {
+    callback = new Nan::Callback(info[callbackIndex].As<v8::Function>());
+  }
+
+  // buffer is a special non-rocks option, it's specific to rocksdb-node
+  bool buffer = false;
+  if (optsIndex != -1) {
+    v8::Local<v8::String> key = Nan::New("buffer").ToLocalChecked();
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    if (!opts.IsEmpty() && opts->Has(key)) {
+      buffer = opts->Get(key)->BooleanValue();
+    }
+  }
+
+  rocksdb::ReadOptions options;
+  if (optsIndex != -1) {
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    OptionsHelper::ProcessReadOptions(opts, &options);
+  }
+
+  rocksdb::ColumnFamilyHandle *columnFamily = NULL;
+  if (familyIndex != -1) {
+    string family = string(*Nan::Utf8String(info[familyIndex]));
+    columnFamily = dbNode->GetColumnFamily(family);
+  } else {
+    columnFamily = dbNode->GetColumnFamily(rocksdb::kDefaultColumnFamilyName);
+  }
+
+  if (columnFamily == NULL) {
+    if (callback) {
+      v8::Local<v8::Value> argv[1] = {Nan::New<v8::String>(ERR_CF_DOES_NOT_EXIST).ToLocalChecked()};
+      callback->Call(1, argv);
+    } else {
+      Nan::ThrowError(ERR_CF_DOES_NOT_EXIST);
+    }
+    return;
+  }
+
+  v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
+  if (callback) {
+    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, buffer, options, columnFamily, keysArray));
+  } else {
+    std::vector<rocksdb::Slice> keys;
+    for (unsigned int i = 0; i < keysArray->Length(); i++) {
+      if (node::Buffer::HasInstance(keysArray->Get(i))) {
+        rocksdb::Slice s = rocksdb::Slice(node::Buffer::Data(keysArray->Get(i)), node::Buffer::Length(keysArray->Get(i)));
+        keys.push_back(s);
+      } else {
+        std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
+        rocksdb::Slice s = rocksdb::Slice(*str);
+        keys.push_back(s);
+      }
+    }
+
+    // Currently just one column family passed, i.e. multigets only supported in one column
+    // Change here in future to support passing array of cf handles
+    std::vector<rocksdb::ColumnFamilyHandle*>families;
+    for (unsigned int i = 0; i < keysArray->Length(); i++) {
+      families.push_back(columnFamily);
+    }
+
+    std::vector<rocksdb::Status> statuss;
+    std::vector<std::string> values;
+    statuss = dbNode->_db->MultiGet(options, families, keys, &values);
+
+    v8::Local<v8::Array> arr = Nan::New<v8::Array>();
+    for(unsigned i = 0; i != values.size(); i++) {
+      rocksdb::Status s = statuss[i];
+      if (s.ok()) {
+        std::string val = values[i];
+        if (buffer) {
+          Nan::Set(arr, i, Nan::CopyBuffer((char*)val.data(), val.size()).ToLocalChecked());
+        } else {
+          Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+        }
+      } else if (s.IsNotFound()) {
+        Nan::Set(arr, i, Nan::Null());
+      } else {
+        // TODO - verify this is correct...]
+        Nan::ThrowError(s.getState());
+      }
+    }
+
+    info.GetReturnValue().Set(arr);
   }
 }
