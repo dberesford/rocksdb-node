@@ -932,7 +932,7 @@ NAN_METHOD(DBNode::CompactRange) {
   v8::Local<v8::Object> toObj = toIndex == -1 ? Nan::New<v8::Object>() : info[toIndex].As<v8::Object>();
 
   if (callback) {
-    CompactRangeWorker *crw = new CompactRangeWorker(callback, dbNode->_db, options, NULL, fromObj, toObj);
+    CompactRangeWorker *crw = new CompactRangeWorker(callback, dbNode->_db, options, columnFamily, fromObj, toObj);
     Nan::AsyncQueueWorker(crw);
   } else {
     rocksdb::Slice* from = NULL;
