@@ -1097,49 +1097,4 @@ NAN_METHOD(DBNode::MultiGet) {
 
     info.GetReturnValue().Set(arr);
   }
-
-  // TODO - free keys?!
-  // TODO - buffer k/v
-  // TODO - test all arg combos
-  // TODO - document
-
-/*
-  rocksdb::CompactRangeOptions options;
-  if (optsIndex != -1) {
-    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
-    OptionsHelper::ProcessCompactRangeOptions(opts, &options);
-  } else {
-    options = rocksdb::CompactRangeOptions();
-  }
-
-  rocksdb::Status s;
-
-  v8::Local<v8::Object> fromObj = fromIndex == -1 ? Nan::New<v8::Object>() : info[fromIndex].As<v8::Object>();
-  v8::Local<v8::Object> toObj = toIndex == -1 ? Nan::New<v8::Object>() : info[toIndex].As<v8::Object>();
-
-  if (callback) {
-    CompactRangeWorker *crw = new CompactRangeWorker(callback, dbNode->_db, options, NULL, fromObj, toObj);
-    Nan::AsyncQueueWorker(crw);
-  } else {
-    rocksdb::Slice* from = NULL;
-    if (fromIndex != -1) {
-      from = node::Buffer::HasInstance(fromObj) ? new rocksdb::Slice(node::Buffer::Data(fromObj), node::Buffer::Length(fromObj))
-        : new rocksdb::Slice(string(*Nan::Utf8String(fromObj)));
-    }
-
-    rocksdb::Slice* to = NULL;
-    if (toIndex != -1) {
-      to = node::Buffer::HasInstance(toObj) ? new rocksdb::Slice(node::Buffer::Data(toObj), node::Buffer::Length(toObj))
-        : new rocksdb::Slice(string(*Nan::Utf8String(toObj)));
-    }
-
-    s = dbNode->_db->CompactRange(options, from, to);
-    if (!s.ok()) {
-      Nan::ThrowError(s.getState());
-    }
-
-    if (from) delete from;
-    if (to) delete to;
-  }
-*/
 }

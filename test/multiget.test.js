@@ -108,4 +108,24 @@ test('multiget buffers async', {timeout: 50000}, function (t) {
 })
 
 
-//TEST READOPTIONS
+test('multiget test all args', function (t) {
+  const path = os.tmpdir() + '/rocksdbMultiAllArgs'
+  rocksdb.destroyDB(path)
+  const db = rocksdb.open({create_if_missing: true}, path)
+  db.createColumnFamily('col1')
+
+  db.put('col1', 'foo1', 'bar1')
+  db.put('col1', 'foo2', 'bar2')
+  db.put('col1', 'foo3', 'bar3')
+
+  db.multiGet({buffer: false}, 'col1', ['foo1', 'foo2', 'foo3', 'idontexist'], function (err, vals) {
+    t.ok(!err)
+    t.equal(vals[0], 'bar1')
+    t.equal(vals[3], null)
+
+    db.close()
+    rocksdb.destroyDB(path)
+    t.ok(!fs.existsSync(path))
+    t.end()
+  })
+})
