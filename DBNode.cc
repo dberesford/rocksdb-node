@@ -977,7 +977,7 @@ NAN_METHOD(DBNode::MultiGet) {
     // assume two args could be (opts, keys), (keys, callback) or (col, keys)
     if (info[0]->IsObject() && info[1]->IsArray()) {
       optsIndex = 0;
-      callbackIndex = 1;
+      keysIndex = 1;
     } else if(info[0]->IsString() && info[1]->IsArray()) {
       familyIndex = 0;
       keysIndex = 1;
@@ -1016,6 +1016,16 @@ NAN_METHOD(DBNode::MultiGet) {
     callback = new Nan::Callback(info[callbackIndex].As<v8::Function>());
   }
 
+  // buffer is a special non-rocks option, it's specific to rocksdb-node
+  bool buffer = false;
+  if (optsIndex != -1) {
+    v8::Local<v8::String> key = Nan::New("buffer").ToLocalChecked();
+    v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
+    if (!opts.IsEmpty() && opts->Has(key)) {
+      buffer = opts->Get(key)->BooleanValue();
+    }
+  }
+
   rocksdb::ReadOptions options;
   if (optsIndex != -1) {
     v8::Local<v8::Object> opts = info[optsIndex].As<v8::Object>();
@@ -1044,13 +1054,16 @@ NAN_METHOD(DBNode::MultiGet) {
   if (callback) {
     Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, options, columnFamily, keysArray));
   } else {
-
-    // TODO - handle buffer keys, maybe pass in opts array?
     std::vector<rocksdb::Slice> keys;
     for (unsigned int i = 0; i < keysArray->Length(); i++) {
-      std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
-      rocksdb::Slice s = rocksdb::Slice(*str);
-      keys.push_back(s);
+      if (node::Buffer::HasInstance(keysArray->Get(i))) {
+        rocksdb::Slice s = rocksdb::Slice(node::Buffer::Data(keysArray->Get(i)), node::Buffer::Length(keysArray->Get(i)));
+        keys.push_back(s);
+      } else {
+        std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
+        rocksdb::Slice s = rocksdb::Slice(*str);
+        keys.push_back(s);
+      }
     }
 
     // Currently just one column family passed, i.e. multigets only supported in one column
@@ -1062,7 +1075,6 @@ NAN_METHOD(DBNode::MultiGet) {
 
     std::vector<rocksdb::Status> statuss;
     std::vector<std::string> values;
-
     statuss = dbNode->_db->MultiGet(options, families, keys, &values);
 
     v8::Local<v8::Array> arr = Nan::New<v8::Array>();
@@ -1070,7 +1082,11 @@ NAN_METHOD(DBNode::MultiGet) {
       rocksdb::Status s = statuss[i];
       if (s.ok()) {
         std::string val = values[i];
-        Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+        if (buffer) {
+          Nan::Set(arr, i, Nan::CopyBuffer((char*)val.data(), val.size()).ToLocalChecked());
+        } else {
+          Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+        }
       } else if (s.IsNotFound()) {
         Nan::Set(arr, i, Nan::Null());
       } else {

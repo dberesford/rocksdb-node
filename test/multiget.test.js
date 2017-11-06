@@ -71,5 +71,23 @@ test('multiget column families', function (t) {
   })
 })
 
+test('multiget buffers', {timeout: 50000}, function (t) {
+  const path = os.tmpdir() + '/rocksdbMultiGetBuffers'
+  const db = rocksdb.open({create_if_missing: true}, path)
+  const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
+  const val = fs.readFileSync('./test/fixtures/beach.jpg')
+
+  db.put(key, val)
+
+  const vals = db.multiGet({buffer: true}, [key])
+  t.equal(vals[0].length, val.length)
+
+  db.close()
+  rocksdb.destroyDB(path)
+  t.ok(!fs.existsSync(path))
+  t.end()
+})
+
+
 
 //TEST READOPTIONS
