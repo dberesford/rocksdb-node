@@ -228,6 +228,56 @@ db.createColumnFamily('myFamily')
 db.put('myFamily', 'foo', 'bar')
 var value = db.get('myFamily', 'foo')
 ```
+#### MultiGet
+
+The MultiGet API allows an application to retrieve a bunch of keys from the database.
+
+ `db.multiGet(<options>, <column-family>, [keys], <callback>)` where `<options>`, `<column-family>` and `<callback>` are optional. If no callback is passed the method is synchronous.
+
+```javascript
+try {
+  const values = db.multiGet(['foo', 'foo1'])
+  console.log('foo - ', values[0])
+} catch(e)...
+```
+ or 
+
+ ```javascript
+db.multiGet(['foo'], function(err, values){...})
+```
+
+As with `get`, key params be either string or buffer. If the values you are expecting are buffers, you must pass the option `buffer:true`, e.g. 
+
+```javascript
+const key = fs.readFileSync('./test/fixtures/beach-thumb.jpg')
+const valueBuffers = db.multiGet({buffer:true}, [key])
+```
+
+`multiGet` optionally takes an options object as it's first parameter. All boolean and int options as defined in [ReadOptions](https://github.com/facebook/rocksdb/blob/5.2.fb/include/rocksdb/options.h#L1444) are supported, e.g. 
+
+```javascript
+const readOpts = {
+  verify_checksums: true,
+  fill_cache: true,
+  tailing: false,
+  managed: false,
+  total_order_seek: false,
+  prefix_same_as_start: false,
+  pin_data: false,
+  background_purge_on_iterator_cleanup: false,
+  readahead_size: 0,
+  ignore_range_deletions: false
+}
+const vals = db.multiGet(readOpts, ['foo1', 'foo2'])
+```
+
+Column Families are also supported:
+
+```javascript
+db.createColumnFamily('myFamily')
+db.put('myFamily', 'foo', 'bar')
+var values = db.multiGet('myFamily', ['foo'])
+```
 
 #### Delete
 
