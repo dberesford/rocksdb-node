@@ -1052,7 +1052,7 @@ NAN_METHOD(DBNode::MultiGet) {
 
   v8::Local<v8::Array> keysArray = info[keysIndex].As<v8::Array>();
   if (callback) {
-    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, options, columnFamily, keysArray));
+    Nan::AsyncQueueWorker(new MultiGetWorker(callback, dbNode->_db, buffer, options, columnFamily, keysArray));
   } else {
     std::vector<rocksdb::Slice> keys;
     for (unsigned int i = 0; i < keysArray->Length(); i++) {

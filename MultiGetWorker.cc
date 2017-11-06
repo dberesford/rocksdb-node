@@ -2,14 +2,19 @@
 #include "MultiGetWorker.h"
 #include "rocksdb/db.h"
 
-MultiGetWorker::MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *columnFamily, v8::Local<v8::Array> &keysArray)
-  : AsyncWorker(callback), _db(db), _options(options), _keysArray(keysArray) {
+MultiGetWorker::MultiGetWorker(Nan::Callback *callback, rocksdb::DB *db, bool buffer, rocksdb::ReadOptions options, rocksdb::ColumnFamilyHandle *columnFamily, v8::Local<v8::Array> &keysArray)
+  : AsyncWorker(callback), _db(db), _buffer(buffer), _options(options), _keysArray(keysArray) {
   SaveToPersistent("key", keysArray);
 
   for (unsigned int i = 0; i < keysArray->Length(); i++) {
-    std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
-    rocksdb::Slice s = rocksdb::Slice(*str);
-    _keys.push_back(s);
+    if (node::Buffer::HasInstance(keysArray->Get(i))) {
+      rocksdb::Slice s = rocksdb::Slice(node::Buffer::Data(keysArray->Get(i)), node::Buffer::Length(keysArray->Get(i)));
+      _keys.push_back(s);
+    } else {
+      std::string *str = new std::string(*Nan::Utf8String(keysArray->Get(i)));
+      rocksdb::Slice s = rocksdb::Slice(*str);
+      _keys.push_back(s);
+    }
   }
 
   // Currently just one column family passed, i.e. multigets only supported in one column
@@ -35,7 +40,11 @@ void MultiGetWorker::HandleOKCallback () {
     rocksdb::Status s = _statuss[i];
     if (s.ok()) {
       std::string val = _values[i];
-      Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+      if (_buffer) {
+        Nan::Set(arr, i, Nan::CopyBuffer((char*)val.data(), val.size()).ToLocalChecked());
+      } else {
+        Nan::Set(arr, i, Nan::New(val).ToLocalChecked());
+      }
     } else if (s.IsNotFound()) {
       Nan::Set(arr, i, Nan::Null());
     } else {

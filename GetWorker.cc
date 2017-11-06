@@ -18,18 +18,18 @@ void GetWorker::Execute () {
 void GetWorker::HandleOKCallback () {
   Nan::HandleScope scope;
   v8::Local<v8::Value> argv[2] = { Nan::Null(), Nan::Null() };
- 
+
   if (_status.IsNotFound()) {
     callback->Call(2, argv);
     return;
   }
- 
+
   if (!_status.ok()) {
     v8::Local<v8::Value> errv[1] = {};
     errv[0] = Nan::Error(_status.getState());
     callback->Call(1, errv);
     return;
-  } 
+  }
 
   if (_buffer) {
     argv[1] = Nan::CopyBuffer((char*)_value.data(), _value.size()).ToLocalChecked();
