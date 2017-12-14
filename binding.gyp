@@ -27,7 +27,7 @@
         '-fexceptions'
       ],
       'libraries': [
-        "librocksdb.a"
+        "-lrocksdb"
       ],
     }
   ]
