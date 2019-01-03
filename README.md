@@ -1,3 +1,8 @@
+NOT MAINTAINED
+====
+
+Fork and use at your own risk.
+
 # RocksDB
 
 Node native binding for RocksDB. Aims to be a full nodejs mapping for https://github.com/facebook/rocksdb/wiki. Developed against RocksDB 5.2.
